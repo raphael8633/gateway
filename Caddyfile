@@ -1,0 +1,59 @@
+# Gateway — Caddy reverse proxy config
+# Docs: https://caddyserver.com/docs/caddyfile
+#
+# 啟動方式: caddy run --config Caddyfile
+# 重載設定: caddy reload --config Caddyfile
+#
+# 新增服務 checklist:
+#   1. 在下方加一個 handle 區塊
+#   2. 確認服務本身已設好 base path（見各專案 README）
+#   3. caddy reload
+
+raphtools.com {
+	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
+
+	# ─── Navigation Page (root) ──────────────────────────────────────────────
+	# Credentials: raph / raph1234  (see .env)
+	handle / {
+		basic_auth {
+			raph $2a$14$keWvsxRKeiBdYMAPlYY6teA2TGQsTw8gUyzhDCvP7xRQIgyintyj6
+		}
+		file_server {
+			root /home/ubuntu/projects/gateway/www
+		}
+	}
+
+	# ─── Polymarket Simulation ───────────────────────────────────────────────
+	# 啟動: streamlit run src/app.py --server.baseUrlPath=/poly/simulation --server.port=8501
+	handle /poly/simulation* {
+		reverse_proxy localhost:8501
+	}
+
+	# ─── Nothing Happens Research ────────────────────────────────────────────
+	# 啟動: streamlit run src/nothing_happens.py --server.baseUrlPath=/poly/nothing-happens --server.port=8502
+	handle /poly/nothing-happens* {
+		reverse_proxy localhost:8502
+	}
+
+	# ─── Polymarket Address Tracker ──────────────────────────────────────────
+	# 啟動: next.config.js basePath: '/poly/tracker', npm run start (port 3001)
+	handle /poly/tracker* {
+		reverse_proxy localhost:3001
+	}
+
+	# ─── Maple Toolkit ───────────────────────────────────────────────────────
+	# Backend API: uvicorn app.main:app --port 8000
+	# Frontend: npm run build && serve -s dist --basepath maple-kit (port 4173)
+	#   或直接 vite preview --base /maple-kit --port 4173
+	handle /maple-kit/api* {
+		reverse_proxy localhost:8000
+	}
+	handle /maple-kit* {
+		reverse_proxy localhost:4173
+	}
+
+	# ─── 新服務範本 ───────────────────────────────────────────────────────────
+	# handle /your-path* {
+	#     reverse_proxy localhost:PORT
+	# }
+}
