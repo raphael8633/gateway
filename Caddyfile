@@ -45,11 +45,24 @@ raphtools.com {
 	# Backend API: uvicorn app.main:app --port 8000
 	# Frontend: npm run build && serve -s dist --basepath maple-kit (port 4173)
 	#   或直接 vite preview --base /maple-kit --port 4173
-	handle /maple-kit/api* {
+	#
+	# API routing: frontend fetches /api/v2/... (absolute path, resolved from origin).
+	# handle_path strips the matched prefix before forwarding to backend.
+	handle_path /maple-kit/api* {
+		reverse_proxy localhost:8000
+	}
+	handle /api* {
 		reverse_proxy localhost:8000
 	}
 	handle /maple-kit* {
 		reverse_proxy localhost:4173
+	}
+
+	# ─── VPS2 WireGuard VPN 管理面板 ─────────────────────────────────────────
+	# 啟動: uvicorn app.main:app --port 8011 (via systemd vps2-vpn.service)
+	# 專案: /home/ubuntu/projects/vps2-vpn
+	handle_path /vpn* {
+		reverse_proxy localhost:8011
 	}
 
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────

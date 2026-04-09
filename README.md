@@ -10,7 +10,8 @@ raphtools.com
 ├── /poly/nothing-happens  → localhost:8502  (Streamlit)
 ├── /poly/tracker          → localhost:3001  (Next.js)
 ├── /maple-kit             → localhost:4173  (Vite build)
-└── /maple-kit/api         → localhost:8000  (FastAPI)
+├── /maple-kit/api         → localhost:8000  (FastAPI)
+└── /vpn                   → localhost:8011  (FastAPI — vps2-vpn)
 ```
 
 ## 常用指令
@@ -20,7 +21,20 @@ caddy reload --config Caddyfile   # 重載設定（不中斷連線）
 caddy validate --config Caddyfile # 驗證語法
 sudo systemctl restart caddy      # 重啟服務
 sudo journalctl -fu caddy         # 即時日誌（含 TLS 憑證申請）
+python3 gen-index.py              # 手動重新生成 www/index.html
+systemctl status gateway-watch    # file watcher 狀態（systemd，開機自動啟動）
 ```
+
+## 導覽頁（www/index.html）
+
+`www/index.html` 由 `gen-index.py` 從 `../README.md` 的 `Gateway` 欄**自動生成**，勿手動編輯。
+
+啟動 watcher 後，更改 `../README.md` 或 `Caddyfile` 會自動觸發對應動作：
+
+| 檔案 | 觸發動作 |
+|------|---------|
+| `../README.md` | `gen-index.py` → 更新 `www/index.html` |
+| `Caddyfile` | `caddy reload` |
 
 ## 新增服務
 
@@ -31,8 +45,9 @@ sudo journalctl -fu caddy         # 即時日誌（含 TLS 憑證申請）
    }
    ```
 2. 確認服務端已設好 base path（詳見各專案 README）
-3. `caddy reload --config Caddyfile`
-4. 更新 `CLAUDE.md` 的 Service Registry
+3. `caddy reload --config Caddyfile`（watcher 啟動中則自動執行）
+4. 在 `../README.md` 加一列並填 `Gateway` 欄 → `www/index.html` 自動更新
+5. 更新 `CLAUDE.md` 的 Service Registry
 
 ## 各語言 Base Path 設定
 
@@ -77,6 +92,7 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 | `polymarket-address-tracker` | 3001 | Next.js |
 | `polymarket-simulation` | 8501 | Streamlit (app.py) |
 | `polymarket-nothing-happens` | 8502 | Streamlit (nothing_happens.py) |
+| `vps2-vpn` | 8011 | FastAPI (uvicorn, /home/ubuntu/projects/vps2-vpn) |
 
 健康檢查：
 
