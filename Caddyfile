@@ -9,6 +9,13 @@
 #   2. 確認服務本身已設好 base path（見各專案 README）
 #   3. caddy reload
 
+{
+	# Disable HTTP/3 (QUIC) so UDP 443 is available for WireGuard (wg2)
+	servers {
+		protocols h1 h2
+	}
+}
+
 raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
 
@@ -63,6 +70,13 @@ raphtools.com {
 	# 專案: /home/ubuntu/projects/vps2-vpn
 	handle_path /vpn* {
 		reverse_proxy localhost:8011
+	}
+
+	# ─── Health Manage ───────────────────────────────────────────────────────
+	# 啟動: systemd health-manage.service (port 3002)
+	# 專案: /home/ubuntu/projects/health-manage
+	handle /health* {
+		reverse_proxy localhost:3002
 	}
 
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────
