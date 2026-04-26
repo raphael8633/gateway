@@ -16,6 +16,14 @@
 	}
 }
 
+(auth_portal) {
+	forward_auth 127.0.0.1:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+		trusted_proxies 127.0.0.1/32 ::1
+	}
+}
+
 raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
 
@@ -28,6 +36,13 @@ raphtools.com {
 		file_server {
 			root /home/ubuntu/projects/gateway/www
 		}
+	}
+
+	# ─── Global Auth Portal ──────────────────────────────────────────────────
+	# Authelia SSO portal; 啟動: systemd global-auth.service (port 9091)
+	# 專案: /home/ubuntu/projects/global-auth
+	handle /auth* {
+		reverse_proxy 127.0.0.1:9091
 	}
 
 	# ─── Polymarket Simulation ───────────────────────────────────────────────
@@ -45,6 +60,7 @@ raphtools.com {
 	# ─── Polymarket Address Tracker ──────────────────────────────────────────
 	# 啟動: next.config.js basePath: '/poly/tracker', npm run start (port 3001)
 	handle /poly/tracker* {
+		import auth_portal
 		reverse_proxy localhost:3001
 	}
 
@@ -76,7 +92,23 @@ raphtools.com {
 	# 啟動: systemd health-manage.service (port 3002)
 	# 專案: /home/ubuntu/projects/health-manage
 	handle /health* {
+		import auth_portal
 		reverse_proxy localhost:3002
+	}
+
+	# ─── Task Hub ────────────────────────────────────────────────────────────
+	# 啟動: systemd task-hub.service (port 3003) — service not yet deployed
+	# 專案: /home/ubuntu/projects/task-hub (planned)
+	handle /task-hub* {
+		import auth_portal
+		reverse_proxy localhost:3003
+	}
+
+	# ─── Public Share ────────────────────────────────────────────────────────
+	# 啟動: systemd public-share.service (port 8020)
+	# 專案: /home/ubuntu/projects/public-share
+	handle_path /public* {
+		reverse_proxy localhost:8020
 	}
 
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────

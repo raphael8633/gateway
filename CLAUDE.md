@@ -17,7 +17,7 @@
 
 ## Project Context
 
-- **Domain:** `raphtools.com` (Cloudflare DNS-01 TLS via `CF_API_TOKEN`)
+- **Domain:** `raphtools.com` (Caddy auto-HTTPS / Let's Encrypt; no Cloudflare API required)
 - 需維護的檔案：`Caddyfile`（routing）；`www/index.html` 由 `gen-index.py` 自動生成，勿手動編輯
 - **新增服務流程：**
   1. `Caddyfile` 加 handle 區塊 → `caddy reload`（watcher 自動觸發）
@@ -32,12 +32,16 @@
 
 | Path | Port | Project | Type |
 |------|------|---------|------|
+| `/auth` | 9091 | global-auth | Authelia (SSO portal) |
 | `/poly/simulation` | 8501 | polymarket-simulation | Streamlit |
 | `/poly/nothing-happens` | 8502 | polymarket-simulation | Streamlit |
-| `/poly/tracker` | 3001 | polymarket-address-tracker | Next.js |
+| `/poly/tracker` | 3001 | polymarket-address-tracker | Next.js [protected] |
+| `/health` | 3002 | health-manage | Next.js [protected] |
+| `/task-hub` | 3003 | task-hub (planned) | — [protected] |
 | `/maple-kit` | 4173 | maple-toolkit | Vite/FastAPI |
 | `/maple-kit/api` | 8000 | maple-toolkit | FastAPI |
 | `/vpn` | 8011 | vps2-vpn | FastAPI (uvicorn) |
+| `/public` | 8020 | public-share | Python WSGI |
 
 ## Notes
 

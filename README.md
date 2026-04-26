@@ -6,12 +6,16 @@ Caddy reverse proxy，統一管理所有服務的對外路由。
 
 ```
 raphtools.com
+├── /auth                  → localhost:9091  (Authelia — global-auth)   [SSO portal]
 ├── /poly/simulation       → localhost:8501  (Streamlit)
 ├── /poly/nothing-happens  → localhost:8502  (Streamlit)
-├── /poly/tracker          → localhost:3001  (Next.js)
+├── /poly/tracker          → localhost:3001  (Next.js)                  [protected]
 ├── /maple-kit             → localhost:4173  (Vite build)
 ├── /maple-kit/api         → localhost:8000  (FastAPI)
-└── /vpn                   → localhost:8011  (FastAPI — vps2-vpn)
+├── /vpn                   → localhost:8011  (FastAPI — vps2-vpn)
+├── /health                → localhost:3002  (Next.js — health-manage)  [protected]
+├── /task-hub              → localhost:3003  (planned)                  [protected]
+└── /public                → localhost:8020  (Python WSGI — public-share)
 ```
 
 ## 常用指令
@@ -48,6 +52,11 @@ systemctl status gateway-watch    # file watcher 狀態（systemd，開機自動
 3. `caddy reload --config Caddyfile`（watcher 啟動中則自動執行）
 4. 在 `../README.md` 加一列並填 `Gateway` 欄 → `www/index.html` 自動更新
 5. 更新 `CLAUDE.md` 的 Service Registry
+
+目前已註冊的 Next.js 專案有：
+
+- `/poly/tracker` → `polymarket-address-tracker`（port 3001）
+- `/health` → `health-manage`（port 3002，`NEXT_PUBLIC_BASE_PATH=/health`）
 
 ## 各語言 Base Path 設定
 
@@ -87,9 +96,13 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 
 | Service 名稱 | Port | 說明 |
 |-------------|------|------|
+| `global-auth` | 9091 | Authelia SSO portal (`/auth`, forward_auth gate) |
 | `maple-toolkit-api` | 8000 | FastAPI (uvicorn) |
 | `maple-toolkit-frontend` | 4173 | Vite preview |
 | `polymarket-address-tracker` | 3001 | Next.js |
+| `health-manage` | 3002 | Next.js (體重管理 MVP, base path `/health`) |
+| `task-hub` | 3003 | planned — wired, service not yet deployed |
+| `public-share` | 8020 | Python WSGI (`/public`, html/md file share) |
 | `polymarket-simulation` | 8501 | Streamlit (app.py) |
 | `polymarket-nothing-happens` | 8502 | Streamlit (nothing_happens.py) |
 | `vps2-vpn` | 8011 | FastAPI (uvicorn, /home/ubuntu/projects/vps2-vpn) |
