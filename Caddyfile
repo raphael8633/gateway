@@ -113,6 +113,13 @@ raphtools.com {
 	# ─── Public Share ────────────────────────────────────────────────────────
 	# 啟動: systemd public-share.service (port 8020)
 	# 專案: /home/ubuntu/projects/public-share
+	handle /public/private* {
+		route {
+			import auth_portal
+			uri strip_prefix /public
+			reverse_proxy localhost:8020
+		}
+	}
 	handle_path /public* {
 		reverse_proxy localhost:8020
 	}
