@@ -6,6 +6,7 @@ Caddy reverse proxy，統一管理所有服務的對外路由。
 
 ```
 raphtools.com
+├── /                      → www/index.html  (導覽頁)                   [protected]
 ├── /auth                  → localhost:9091  (Authelia — global-auth)   [SSO portal]
 ├── /poly/simulation       → localhost:8501  (Streamlit)
 ├── /poly/nothing-happens  → localhost:8502  (Streamlit)
@@ -17,6 +18,8 @@ raphtools.com
 ├── /task-hub              → localhost:3003  (planned)                  [protected]
 └── /public                → localhost:8020  (Python WSGI — public-share)
 ```
+
+所有 `[protected]` 路由（含根目錄）統一由 Authelia SSO 保護，不再有獨立的 Caddy basic_auth。
 
 ## 常用指令
 

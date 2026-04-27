@@ -28,11 +28,9 @@ raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
 
 	# ─── Navigation Page (root) ──────────────────────────────────────────────
-	# Credentials: raph / raph1234  (see .env)
+	# Auth: Authelia SSO (same as all other protected routes)
 	handle / {
-		basic_auth {
-			raph $2a$14$keWvsxRKeiBdYMAPlYY6teA2TGQsTw8gUyzhDCvP7xRQIgyintyj6
-		}
+		import auth_portal
 		file_server {
 			root /home/ubuntu/projects/gateway/www
 		}
