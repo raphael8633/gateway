@@ -23,7 +23,11 @@ echo "[watch] Started. Watching:"
 echo "  $README"
 echo "  $CADDYFILE"
 
-inotifywait -m -e close_write --format '%w' "$README" "$CADDYFILE" 2>/dev/null \
+README_DIR="$(dirname "$README")"
+CADDYFILE_DIR="$(dirname "$CADDYFILE")"
+
+inotifywait -m -e close_write -e moved_to --format '%w%f' \
+  "$README_DIR" "$CADDYFILE_DIR" 2>/dev/null \
 | while IFS= read -r changed; do
     if [[ "$changed" == "$README" ]]; then
       echo "[watch] README.md changed → regenerating index.html"
