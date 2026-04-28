@@ -43,6 +43,11 @@ raphtools.com {
 		reverse_proxy 127.0.0.1:9091
 	}
 
+	# ─── Ban Status (public, no auth) ────────────────────────────────────────
+	handle /ban-status* {
+		reverse_proxy localhost:5000
+	}
+
 	# ─── Auth Admin UI ───────────────────────────────────────────────────────
 	# 啟動: systemd admin-ui.service (port 5000)
 	# 專案: /home/ubuntu/projects/global-auth/admin-ui

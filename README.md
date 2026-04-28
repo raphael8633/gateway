@@ -115,3 +115,12 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 ```bash
 bash scripts/check-services.sh
 ```
+
+## 與 global-auth 的架構關係
+
+Auth 邏輯由獨立的 [global-auth](../global-auth/) 專案（Authelia）處理，刻意不合併進此 repo。原因：
+
+- **職責分離**：`gateway` = routing layer（Caddy）；`global-auth` = identity layer（Authelia）
+- **操作語意不同**：gateway 用 `caddy reload` 熱重載；global-auth 需 `systemctl restart`（M-003：Authelia 不支援 SIGHUP）
+- **機密邊界**：global-auth `.env` 含 JWT secret；gateway config 無敏感資料，分開可獨立審計
+- **整合契約**：Caddyfile `forward_auth 127.0.0.1:9091`，跨越此邊界不需要共用 codebase
