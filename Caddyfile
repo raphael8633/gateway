@@ -18,7 +18,7 @@
 
 (auth_portal) {
 	forward_auth 127.0.0.1:9091 {
-		uri /api/authz/forward-auth
+		uri /auth/api/authz/forward-auth
 		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
 		trusted_proxies 127.0.0.1/32 ::1
 	}
