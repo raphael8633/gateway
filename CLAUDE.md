@@ -33,11 +33,16 @@
 | Path | Port | Project | Type |
 |------|------|---------|------|
 | `/auth` | 9091 | global-auth | Authelia (SSO portal) |
+| `/ban-status` | 5000 | global-auth/admin-ui | public ban status |
+| `/auth-admin` | 5000 | global-auth/admin-ui | Auth admin UI [protected] |
 | `/poly/simulation` | 8501 | polymarket-simulation | Streamlit |
 | `/poly/nothing-happens` | 8502 | polymarket-simulation | Streamlit |
 | `/poly/tracker` | 3001 | polymarket-address-tracker | Next.js [protected] |
 | `/health` | 3002 | health-manage | Next.js [protected] |
-| `/task-hub` | 3003 | task-hub (planned) | — [protected] |
+| `/task-hub` | 3003 | task-hub | Next.js [protected] |
+| `/reader/api` | 3005 | raph-reader | Node.js REST API [protected] |
+| `/reader` | 5174 | raph-reader | Vite/PWA [protected] |
+| `/hermes-webui` | 8877 | hermes-webui | Python stdlib [protected] |
 | `/maple-kit` | 4173 | maple-toolkit | Vite/FastAPI |
 | `/maple-kit/api` | 8000 | maple-toolkit | FastAPI |
 | `/vpn` | 8011 | vps2-vpn | FastAPI (uvicorn) |

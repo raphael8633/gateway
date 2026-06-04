@@ -8,6 +8,8 @@ Caddy reverse proxy，統一管理所有服務的對外路由。
 raphtools.com
 ├── /                      → www/index.html  (導覽頁)                   [protected]
 ├── /auth                  → localhost:9091  (Authelia — global-auth)   [SSO portal]
+├── /ban-status            → localhost:5000  (Auth ban status)          [public]
+├── /auth-admin            → localhost:5000  (Auth admin UI)            [protected]
 ├── /poly/simulation       → localhost:8501  (Streamlit)
 ├── /poly/nothing-happens  → localhost:8502  (Streamlit)
 ├── /poly/tracker          → localhost:3001  (Next.js)                  [protected]
@@ -15,7 +17,10 @@ raphtools.com
 ├── /maple-kit/api         → localhost:8000  (FastAPI)
 ├── /vpn                   → localhost:8011  (FastAPI — vps2-vpn)
 ├── /health                → localhost:3002  (Next.js — health-manage)  [protected]
-├── /task-hub              → localhost:3003  (planned)                  [protected]
+├── /task-hub              → localhost:3003  (Next.js — task-hub)       [protected]
+├── /reader/api            → localhost:3005  (Node.js — raph-reader API) [protected]
+├── /reader                → localhost:5174  (Vite — raph-reader PWA)   [protected]
+├── /hermes-webui          → localhost:8877  (Python — hermes-webui)       [protected]
 └── /public                → localhost:8020  (Python WSGI — public-share)
 ```
 
@@ -100,12 +105,16 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 | Service 名稱 | Port | 說明 |
 |-------------|------|------|
 | `global-auth` | 9091 | Authelia SSO portal (`/auth`, forward_auth gate) |
+| `admin-ui` | 5000 | Auth admin UI (`/auth-admin`) and public ban status (`/ban-status`) |
 | `maple-toolkit-api` | 8000 | FastAPI (uvicorn) |
 | `maple-toolkit-frontend` | 4173 | Vite preview |
 | `polymarket-address-tracker` | 3001 | Next.js |
 | `health-manage` | 3002 | Next.js (體重管理 MVP, base path `/health`) |
-| `task-hub` | 3003 | planned — wired, service not yet deployed |
+| `task-hub` | 3003 | Next.js (`/task-hub`) |
+| `raph-reader-backend` | 3005 | Node.js REST API (`/reader/api`) |
+| `raph-reader-frontend` | 5174 | Vite preview / PWA (`/reader`) |
 | `public-share` | 8020 | Python WSGI (`/public`, html/md file share) |
+| `hermes-webui` | 8877 | Python stdlib (`/hermes-webui`, Hermes browser UI) |
 | `polymarket-simulation` | 8501 | Streamlit (app.py) |
 | `polymarket-nothing-happens` | 8502 | Streamlit (nothing_happens.py) |
 | `vps2-vpn` | 8011 | FastAPI (uvicorn, /home/ubuntu/projects/vps2-vpn) |
