@@ -8,7 +8,6 @@
 #   1. 在下方加一個 handle 區塊
 #   2. 確認服務本身已設好 base path（見各專案 README）
 #   3. caddy reload
-
 {
 	# Disable HTTP/3 (QUIC) so UDP 443 is available for WireGuard (wg2)
 	servers {
@@ -109,11 +108,62 @@ raphtools.com {
 	}
 
 	# ─── Task Hub ────────────────────────────────────────────────────────────
-	# 啟動: systemd task-hub.service (port 3003) — service not yet deployed
-	# 專案: /home/ubuntu/projects/task-hub (planned)
+	# 啟動: systemd task-hub.service (port 3003)
+	# 專案: /home/ubuntu/projects/task-hub
 	handle /task-hub* {
 		import auth_portal
 		reverse_proxy localhost:3003
+	}
+
+	# ─── Raph Reader ─────────────────────────────────────────────────────────
+	# Backend: npm run dev:backend (port 3005) / production service equivalent
+	# Frontend: npm run dev:frontend or vite preview --host 127.0.0.1 --port 5174
+	# Frontend base path: /reader/
+	handle /reader/api* {
+		route {
+			import auth_portal
+			uri strip_prefix /reader
+			reverse_proxy localhost:3005
+		}
+	}
+	handle /reader {
+		redir * /reader/ 308
+	}
+	# Public PWA/app-shell assets so expired/offline Reader clients can update.
+	# User data remains behind /reader/api* auth.
+	handle /reader/sw.js {
+		reverse_proxy localhost:5174
+	}
+	handle /reader/workbox-*.js {
+		reverse_proxy localhost:5174
+	}
+	handle /reader/manifest.webmanifest {
+		reverse_proxy localhost:5174
+	}
+	handle /reader/assets/* {
+		reverse_proxy localhost:5174
+	}
+	handle /reader/index.html {
+		reverse_proxy localhost:5174
+	}
+	handle /reader* {
+		import auth_portal
+		reverse_proxy localhost:5174
+	}
+
+	# ─── Hermes WebUI ────────────────────────────────────────────────────────
+	# 啟動: systemd hermes-webui.service (port 8877)
+	# 專案: /home/ubuntu/projects/hermes-webui
+	# Redirect bare /hermes-webui → /hermes-webui/ so <base href> computes correctly
+	handle /hermes-webui {
+		redir * /hermes-webui/ 308
+	}
+	handle /hermes-webui* {
+		route {
+			import auth_portal
+			uri strip_prefix /hermes-webui
+			reverse_proxy localhost:8877
+		}
 	}
 
 	# ─── Public Share ────────────────────────────────────────────────────────
