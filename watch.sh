@@ -30,10 +30,14 @@ inotifywait -m -e close_write -e moved_to --format '%w%f' \
   "$README_DIR" "$CADDYFILE_DIR" 2>/dev/null \
 | while IFS= read -r changed; do
     if [[ "$changed" == "$README" ]]; then
-      echo "[watch] README.md changed → regenerating index.html"
-      python3 "$SCRIPT_DIR/gen-index.py" && echo "[watch] Done."
+      echo "[watch] README.md changed → regenerating index.html + service registry"
+      python3 "$SCRIPT_DIR/gen-index.py" \
+        && python3 "$SCRIPT_DIR/gen-service-registry.py" \
+        && echo "[watch] Done."
     elif [[ "$changed" == "$CADDYFILE" ]]; then
-      echo "[watch] Caddyfile changed → caddy reload"
-      caddy reload --config "$CADDYFILE" && echo "[watch] Done."
+      echo "[watch] Caddyfile changed → caddy reload + service registry"
+      caddy reload --config "$CADDYFILE" \
+        && python3 "$SCRIPT_DIR/gen-service-registry.py" \
+        && echo "[watch] Done."
     fi
 done

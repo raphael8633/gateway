@@ -5,7 +5,7 @@
 # 重載設定: caddy reload --config Caddyfile
 #
 # 新增服務 checklist:
-#   1. 在下方加一個 handle 區塊
+#   1. 在下方加一個 handle 區塊（公開服務直接 reverse_proxy，受保護服務用 import proxy_auth PORT）
 #   2. 確認服務本身已設好 base path（見各專案 README）
 #   3. caddy reload
 {
@@ -15,6 +15,14 @@
 	}
 }
 
+# ─── Reusable snippets ──────────────────────────────────────────────────────
+# auth_portal       — gates the surrounding handle behind Authelia (global-auth :9091).
+#                     Must include `header_up -Authorization` (M-006: stale browser
+#                     Basic Auth triggers Authelia regulation ban otherwise).
+# proxy_auth        — `import proxy_auth PORT` inside a handle: auth-gate + reverse_proxy.
+# proxy_auth_strip  — `import proxy_auth_strip /prefix PORT` inside a handle: auth-gate,
+#                     strip path prefix, then reverse_proxy. Use when the upstream
+#                     expects to receive paths without the gateway-side base path.
 (auth_portal) {
 	forward_auth 127.0.0.1:9091 {
 		uri /auth/api/authz/forward-auth
@@ -24,11 +32,23 @@
 	}
 }
 
+(proxy_auth) {
+	import auth_portal
+	reverse_proxy localhost:{args[0]}
+}
+
+(proxy_auth_strip) {
+	route {
+		import auth_portal
+		uri strip_prefix {args[0]}
+		reverse_proxy localhost:{args[1]}
+	}
+}
+
 raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
 
 	# ─── Navigation Page (root) ──────────────────────────────────────────────
-	# Auth: Authelia SSO (same as all other protected routes)
 	handle / {
 		import auth_portal
 		file_server {
@@ -36,9 +56,7 @@ raphtools.com {
 		}
 	}
 
-	# ─── Global Auth Portal ──────────────────────────────────────────────────
-	# Authelia SSO portal; 啟動: systemd global-auth.service (port 9091)
-	# 專案: /home/ubuntu/projects/global-auth
+	# ─── Global Auth Portal (Authelia SSO; systemd global-auth.service :9091) ─
 	handle /auth* {
 		reverse_proxy 127.0.0.1:9091
 	}
@@ -48,40 +66,35 @@ raphtools.com {
 		reverse_proxy localhost:5000
 	}
 
-	# ─── Auth Admin UI ───────────────────────────────────────────────────────
-	# 啟動: systemd admin-ui.service (port 5000)
-	# 專案: /home/ubuntu/projects/global-auth/admin-ui
-	handle /auth-admin* {
-		import auth_portal
-		reverse_proxy localhost:5000
+	# ─── Services Status (powers the nav-page status dots) ───────────────────
+	# gateway-services-status.service :8030
+	handle /services-status.json {
+		import proxy_auth 8030
 	}
 
-	# ─── Polymarket Simulation ───────────────────────────────────────────────
-	# 啟動: streamlit run src/app.py --server.baseUrlPath=/poly/simulation --server.port=8501
+	# ─── Auth Admin UI (admin-ui.service :5000) ──────────────────────────────
+	handle /auth-admin* {
+		import proxy_auth 5000
+	}
+
+	# ─── Polymarket — public Streamlit dashboards ───────────────────────────
+	# 啟動: streamlit run ... --server.baseUrlPath=/poly/<slug> --server.port=PORT
 	handle /poly/simulation* {
 		reverse_proxy localhost:8501
 	}
-
-	# ─── Nothing Happens Research ────────────────────────────────────────────
-	# 啟動: streamlit run src/nothing_happens.py --server.baseUrlPath=/poly/nothing-happens --server.port=8502
 	handle /poly/nothing-happens* {
 		reverse_proxy localhost:8502
 	}
 
-	# ─── Polymarket Address Tracker ──────────────────────────────────────────
-	# 啟動: next.config.js basePath: '/poly/tracker', npm run start (port 3001)
+	# ─── Polymarket Address Tracker (Next.js, basePath /poly/tracker :3001) ──
 	handle /poly/tracker* {
-		import auth_portal
-		reverse_proxy localhost:3001
+		import proxy_auth 3001
 	}
 
 	# ─── Maple Toolkit ───────────────────────────────────────────────────────
 	# Backend API: uvicorn app.main:app --port 8000
-	# Frontend: npm run build && serve -s dist --basepath maple-kit (port 4173)
-	#   或直接 vite preview --base /maple-kit --port 4173
-	#
-	# API routing: frontend fetches /api/v2/... (absolute path, resolved from origin).
-	# handle_path strips the matched prefix before forwarding to backend.
+	# Frontend: vite preview --base /maple-kit --port 4173
+	# Frontend fetches absolute /api/v2/... — /api* is therefore reserved here.
 	handle_path /maple-kit/api* {
 		reverse_proxy localhost:8000
 	}
@@ -92,45 +105,32 @@ raphtools.com {
 		reverse_proxy localhost:4173
 	}
 
-	# ─── VPS2 WireGuard VPN 管理面板 ─────────────────────────────────────────
-	# 啟動: uvicorn app.main:app --port 8011 (via systemd vps2-vpn.service)
-	# 專案: /home/ubuntu/projects/vps2-vpn
+	# ─── VPS2 WireGuard VPN 管理面板 (vps2-vpn.service :8011) ────────────────
 	handle_path /vpn* {
 		reverse_proxy localhost:8011
 	}
 
-	# ─── Health Manage ───────────────────────────────────────────────────────
-	# 啟動: systemd health-manage.service (port 3002)
-	# 專案: /home/ubuntu/projects/health-manage
+	# ─── Health Manage (health-manage.service :3002) ─────────────────────────
 	handle /health* {
-		import auth_portal
-		reverse_proxy localhost:3002
+		import proxy_auth 3002
 	}
 
-	# ─── Task Hub ────────────────────────────────────────────────────────────
-	# 啟動: systemd task-hub.service (port 3003)
-	# 專案: /home/ubuntu/projects/task-hub
+	# ─── Task Hub (task-hub.service :3003) ───────────────────────────────────
 	handle /task-hub* {
-		import auth_portal
-		reverse_proxy localhost:3003
+		import proxy_auth 3003
 	}
 
 	# ─── Raph Reader ─────────────────────────────────────────────────────────
-	# Backend: npm run dev:backend (port 3005) / production service equivalent
-	# Frontend: npm run dev:frontend or vite preview --host 127.0.0.1 --port 5174
-	# Frontend base path: /reader/
+	# Backend  /reader/api → :3005 (auth-gated, strip /reader prefix for API)
+	# Frontend /reader     → :5174 (auth-gated PWA + assets)
+	# A small set of PWA shell assets are exposed publicly so expired/offline
+	# clients can still bootstrap and update; user data sits behind the API gate.
 	handle /reader/api* {
-		route {
-			import auth_portal
-			uri strip_prefix /reader
-			reverse_proxy localhost:3005
-		}
+		import proxy_auth_strip /reader 3005
 	}
 	handle /reader {
 		redir * /reader/ 308
 	}
-	# Public PWA/app-shell assets so expired/offline Reader clients can update.
-	# User data remains behind /reader/api* auth.
 	handle /reader/sw.js {
 		reverse_proxy localhost:5174
 	}
@@ -147,28 +147,29 @@ raphtools.com {
 		reverse_proxy localhost:5174
 	}
 	handle /reader* {
-		import auth_portal
-		reverse_proxy localhost:5174
+		import proxy_auth 5174
 	}
 
-	# ─── Hermes WebUI ────────────────────────────────────────────────────────
-	# 啟動: systemd hermes-webui.service (port 8877)
-	# 專案: /home/ubuntu/projects/hermes-webui
-	# Redirect bare /hermes-webui → /hermes-webui/ so <base href> computes correctly
+	# ─── Tao Conviction Dashboard (bittensor-conviction-watcher :3006) ───────
+	# Next.js basePath /tao-conviction; trailing slash redirects to /tao-conviction
+	handle /tao-conviction* {
+		import proxy_auth 3006
+	}
+
+	# ─── Hermes WebUI (hermes-webui.service :8877) ───────────────────────────
+	# Bare /hermes-webui redirects so <base href> computes correctly upstream.
 	handle /hermes-webui {
 		redir * /hermes-webui/ 308
 	}
 	handle /hermes-webui* {
-		route {
-			import auth_portal
-			uri strip_prefix /hermes-webui
-			reverse_proxy localhost:8877
-		}
+		import proxy_auth_strip /hermes-webui 8877
 	}
 
-	# ─── Public Share ────────────────────────────────────────────────────────
-	# 啟動: systemd public-share.service (port 8020)
-	# 專案: /home/ubuntu/projects/public-share
+	# ─── Public Share (public-share.service :8020) ───────────────────────────
+	# /public/private/* is auth-gated (Authelia ACL also enforces per-file
+	# subjects, see global-auth/config/configuration.yml).
+	# Legacy private login/logout URLs redirect into the SSO entry to avoid the
+	# 403 dead-end described in M-008.
 	handle /public/private/login* {
 		redir * /public/private/ 302
 	}
@@ -176,18 +177,13 @@ raphtools.com {
 		redir * /public/private/ 302
 	}
 	handle /public/private* {
-		route {
-			import auth_portal
-			uri strip_prefix /public
-			reverse_proxy localhost:8020
-		}
+		import proxy_auth_strip /public 8020
 	}
 	handle_path /public* {
 		reverse_proxy localhost:8020
 	}
 
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────
-	# handle /your-path* {
-	#     reverse_proxy localhost:PORT
-	# }
+	# Public:    handle /your-path* { reverse_proxy localhost:PORT }
+	# Protected: handle /your-path* { import proxy_auth PORT }
 }

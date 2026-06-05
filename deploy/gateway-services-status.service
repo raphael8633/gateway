@@ -1,0 +1,17 @@
+[Unit]
+Description=gateway services-status JSON endpoint
+After=network.target
+PartOf=caddy.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/projects/gateway
+ExecStart=/usr/bin/python3 /home/ubuntu/projects/gateway/scripts/services-status.py
+Restart=on-failure
+RestartSec=5
+# This service introspects systemctl; no special caps required since it only reads.
+
+[Install]
+WantedBy=multi-user.target
