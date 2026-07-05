@@ -1,0 +1,16 @@
+[Unit]
+Description=Gateway file watcher (README.md → index.html, Caddyfile → caddy reload)
+After=network.target caddy.service
+Wants=caddy.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/projects/gateway
+ExecStart=/home/ubuntu/projects/gateway/watch.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

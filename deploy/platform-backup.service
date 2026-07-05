@@ -1,0 +1,8 @@
+[Unit]
+Description=Platform rolling backup
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/ubuntu/projects/gateway/scripts/platform-backup.sh

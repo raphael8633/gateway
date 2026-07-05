@@ -62,6 +62,7 @@ raphtools.com {
 	}
 
 	# ─── Ban Status (public, no auth) ────────────────────────────────────────
+	# PUBLIC (intentional): account lockout self-check page.
 	handle /ban-status* {
 		reverse_proxy localhost:5000
 	}
@@ -79,9 +80,11 @@ raphtools.com {
 
 	# ─── Polymarket — public Streamlit dashboards ───────────────────────────
 	# 啟動: streamlit run ... --server.baseUrlPath=/poly/<slug> --server.port=PORT
+	# PUBLIC (intentional): read-only research dashboard, no private user data.
 	handle /poly/simulation* {
 		reverse_proxy localhost:8501
 	}
+	# PUBLIC (intentional): read-only research dashboard, no private user data.
 	handle /poly/nothing-happens* {
 		reverse_proxy localhost:8502
 	}
@@ -95,17 +98,21 @@ raphtools.com {
 	# Backend API: uvicorn app.main:app --port 8000
 	# Frontend: vite preview --base /maple-kit --port 4173
 	# Frontend fetches absolute /api/v2/... — /api* is therefore reserved here.
+	# PUBLIC (intentional): public calculator API for the Maple Toolkit app.
 	handle_path /maple-kit/api* {
 		reverse_proxy localhost:8000
 	}
+	# PUBLIC (intentional): public calculator API; reserved for Maple Toolkit absolute fetches.
 	handle /api* {
 		reverse_proxy localhost:8000
 	}
+	# PUBLIC (intentional): public calculator frontend.
 	handle /maple-kit* {
 		reverse_proxy localhost:4173
 	}
 
 	# ─── VPS2 WireGuard VPN 管理面板 (vps2-vpn.service :8011) ────────────────
+	# PUBLIC (intentional): app has its own admin password and device workflow.
 	handle_path /vpn* {
 		reverse_proxy localhost:8011
 	}
@@ -131,18 +138,23 @@ raphtools.com {
 	handle /reader {
 		redir * /reader/ 308
 	}
+	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/sw.js {
 		reverse_proxy localhost:5174
 	}
+	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/workbox-*.js {
 		reverse_proxy localhost:5174
 	}
+	# PUBLIC (intentional): PWA shell manifest; user data remains API-gated.
 	handle /reader/manifest.webmanifest {
 		reverse_proxy localhost:5174
 	}
+	# PUBLIC (intentional): static PWA assets; user data remains API-gated.
 	handle /reader/assets/* {
 		reverse_proxy localhost:5174
 	}
+	# PUBLIC (intentional): PWA shell document; user data remains API-gated.
 	handle /reader/index.html {
 		reverse_proxy localhost:5174
 	}
@@ -152,8 +164,9 @@ raphtools.com {
 
 	# ─── Tao Conviction Dashboard (bittensor-conviction-watcher :3006) ───────
 	# Next.js basePath /tao-conviction; trailing slash redirects to /tao-conviction
+	# PUBLIC (intentional): personal dashboard, no sensitive data.
 	handle /tao-conviction* {
-		import proxy_auth 3006
+		reverse_proxy localhost:3006
 	}
 
 	# ─── Hermes WebUI (hermes-webui.service :8877) ───────────────────────────
@@ -179,6 +192,7 @@ raphtools.com {
 	handle /public/private* {
 		import proxy_auth_strip /public 8020
 	}
+	# PUBLIC (intentional): public file share; private subtree is handled above.
 	handle_path /public* {
 		reverse_proxy localhost:8020
 	}

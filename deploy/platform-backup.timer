@@ -1,0 +1,10 @@
+[Unit]
+Description=Run platform rolling backup daily
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 Asia/Taipei
+Persistent=true
+Unit=platform-backup.service
+
+[Install]
+WantedBy=timers.target
