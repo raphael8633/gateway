@@ -53,6 +53,7 @@ main() {
   local config_count=0
   local mirror_count=0
 
+  rm -rf "$DEST/sqlite" "$DEST/postgres" "$DEST/config"
   mkdir -p "$DEST"/{sqlite,postgres,config/systemd,config/env,config/global-auth} "$MIRROR"
 
   log "backup start dest=$DEST"
@@ -111,6 +112,10 @@ main() {
   fi
   if [[ -d "$DATA_DIR/raph-reader/uploads" ]]; then
     rsync -a --delete "$DATA_DIR/raph-reader/uploads/" "$MIRROR/raph-reader-uploads/"
+    mirror_count=$((mirror_count + 1))
+  fi
+  if [[ -d "$DATA_DIR/hermes-webui/state" ]]; then
+    rsync -a --delete "$DATA_DIR/hermes-webui/state/" "$MIRROR/hermes-webui-state/"
     mirror_count=$((mirror_count + 1))
   fi
 

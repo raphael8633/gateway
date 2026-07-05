@@ -19,6 +19,7 @@ sudo systemctl restart caddy      # 重啟服務
 sudo journalctl -fu caddy         # 即時日誌（含 TLS 憑證申請）
 python3 gen-index.py              # 手動重新生成 www/index.html
 systemctl status gateway-watch    # file watcher 狀態（systemd，開機自動啟動）
+systemctl status platform-backup.timer # 平台本機備份排程
 ```
 
 ## 導覽頁（www/index.html）
@@ -91,6 +92,13 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 ```bash
 bash scripts/check-services.sh
 ```
+
+`scripts/check-services.sh` 會從 `Caddyfile` 解析 handle/import/reverse_proxy port，不需手動維護 port 清單。
+
+## Platform Maintenance
+
+- 本機滾動備份：`scripts/platform-backup.sh`，由 `platform-backup.timer` 每日 04:30 Asia/Taipei 執行。
+- journald 上限：`deploy/journald-limit.conf` 對應 `/etc/systemd/journald.conf.d/limit.conf`，設定 `SystemMaxUse=1G`。
 
 ## 與 global-auth 的架構關係
 
