@@ -169,6 +169,12 @@ raphtools.com {
 		reverse_proxy localhost:3006
 	}
 
+	# ─── TAO Research Viewer (tao-research-viewer.service :8040) ─────────────
+	# Read-only viewer over subtensor-hub research cards; Authelia group:tao-research
+	handle /tao-research* {
+		import proxy_auth 8040
+	}
+
 	# ─── Hermes WebUI (hermes-webui.service :8877) ───────────────────────────
 	# Bare /hermes-webui redirects so <base href> computes correctly upstream.
 	handle /hermes-webui {
