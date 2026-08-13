@@ -169,6 +169,13 @@ raphtools.com {
 		reverse_proxy localhost:3006
 	}
 
+	# ─── TAO Ask (tao-ask.service :8041) ──────────────────────────────────────
+	# Headless Claude Q&A over subtensor-hub; path 比 /tao-research* 長，Caddy 自動優先。
+	# Authelia ACL 沿用 ^/tao-research(/.*)?$ group:tao-research，零改動。
+	handle /tao-research/ask* {
+		import proxy_auth 8041
+	}
+
 	# ─── TAO Research Viewer (tao-research-viewer.service :8040) ─────────────
 	# Read-only viewer over subtensor-hub research cards; Authelia group:tao-research
 	handle /tao-research* {
