@@ -8,56 +8,47 @@ If no delegation is in use, stop here and return to `AGENTS.md`.
 
 @/home/ubuntu/projects/raph-power/shared/delegation.md
 
-The above defines: when to delegate, executor routing by classification, main-context vs sub-agent split, progress logging, prompt packaging, and review gates. Apply it as written.
+The above defines the opt-in trigger, routing, progress logging, prompt
+packaging, and review gates. Apply it as written.
 
 ## Codex-specific notes
 
-### Tool availability check (once per session)
+**Delegation is opt-in.** Do not delegate based only on task classification.
+The main Codex agent may execute S0–S3 tasks directly.
 
-- `codex --version`
-- `claude --version`
+When delegation is explicitly requested by the user or applicable instructions:
 
-Record in checkpoint: `codex_cli_version=...`, `claude_cli_version=...` (or `unavailable`).
+- Use Codex native collaboration tools (`spawn_agent`, `send_message`,
+  `followup_task`, `wait_agent`, and related runtime-provided tools).
+- Delegate only concrete, bounded work that can proceed independently.
+- Do not invoke Claude CLI or any other external model CLI as a sub-agent.
+- Do not route models or providers by S1/S2/S3 classification.
+- Keep implementation and review in the main agent unless the explicit
+  delegation request covers those roles.
 
-### Executor routing (Codex perspective)
+### On-demand Claude Fable 5 advisor
 
-| Classification | Primary Executor | Fallback |
-|---------------|------------------|----------|
-| S0 | Main session direct | — |
-| S1 | Codex sub-agent (sonnet-equivalent) | — |
-| S2 / S3 | Claude Opus via Claude CLI | Codex sub-agent (MUST notify user) |
+This is a read-only consultation path, separate from delegation and execution.
+Use it only when the user explicitly asks to consult, discuss with, or get an
+advisor opinion from Claude Fable 5.
 
-### Claude CLI dispatch (S2/S3)
-
-Evidence files: prompt at `/tmp/opus-task.md`, raw output at `/tmp/opus-output.txt`.
-
-```bash
-claude -p \
-  --model claude-opus-4-6 \
-  --output-format text \
-  < /tmp/opus-task.md \
-  > /tmp/opus-output.txt
-```
-
-Prompt preamble (Opus must emit raw unified diff):
-
-```
-You are a code-generation sub-agent. Produce ONLY a unified diff. Rules:
-- First line of your output MUST be `diff --git` or `---`. Nothing before it.
-- Do NOT wrap output in markdown code fences. Raw diff only.
-- Do NOT output prose, explanation, narration, or XML/JSON.
-- If you cannot produce a valid diff, output exactly: MALFORMED
-```
-
-### Fallback
-
-If `claude --version` fails or Claude CLI fails the same task twice → notify user, run via Codex sub-agent with `executor=codex-subagent-fallback`.
+- Send a compact question and only the necessary, non-secret context through
+  stdin to `/home/ubuntu/projects/raph-power/codex/claude-fable-advisor.sh`.
+- The helper pins `claude-fable-5`, disables tools and session persistence, and
+  returns Claude Code's JSON result so the selected model remains auditable.
+- For a multi-round discussion, include the prior advisor answer plus the main
+  agent's concrete question or disagreement in the next request.
+- Treat the response as advisory evidence. The main agent evaluates it, owns
+  the final judgment, and performs any implementation or external action.
+- If the CLI, authentication, model, quota, or request fails, report the exact
+  failure. Do not silently substitute another model or claim consultation.
 
 ### Security defaults
 
 - Do NOT auto-approve commands involving credentials/secrets.
-- Do NOT embed secrets into `/tmp/*-task.md`.
-- If a task involves permissions/auth/security → force `task_class >= S2`, route to Opus.
+- Do NOT embed secrets into delegated prompts or artifacts.
+- Security/auth classification still follows the universal classification
+  rules; it does not force delegation.
 
 ## Project-specific delegation overrides
 
