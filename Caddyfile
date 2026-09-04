@@ -162,6 +162,19 @@ raphtools.com {
 		import proxy_auth 5174
 	}
 
+	# ─── Raph Tools (raph-tools backend :3007 / frontend :5175) ─────────────────
+	# Codex-backed micro tools. Everything is auth-gated; the API is served under
+	# /tools/api and the backend expects the /tools prefix stripped.
+	handle /tools/api* {
+		import proxy_auth_strip /tools 3007
+	}
+	handle /tools {
+		redir * /tools/ 308
+	}
+	handle /tools* {
+		import proxy_auth 5175
+	}
+
 	# ─── Tao Conviction Dashboard (bittensor-conviction-watcher :3006) ───────
 	# Next.js basePath /tao-conviction; trailing slash redirects to /tao-conviction
 	# PUBLIC (intentional): personal dashboard, no sensitive data.
