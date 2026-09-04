@@ -41,7 +41,7 @@ systemctl status platform-backup.timer # 平台本機備份排程
        reverse_proxy localhost:PORT
    }
    ```
-2. 確認服務端已設好 base path（詳見各專案 README）
+2. 確認服務端已設好 base path（詳見各專案 README）。Vite `vite preview` 前端還要設 `preview.allowedHosts: ['raphtools.com']`，否則外站每個請求都回 `Blocked request. This host is not allowed`（`MISTAKES.md` G-001）
 3. `caddy reload --config Caddyfile`（watcher 啟動中則自動執行）
 4. 在 `../README.md` 加一列並填 `Gateway` 欄 → `www/index.html` 自動更新
 5. 更新 `CLAUDE.md` 的 Service Registry
@@ -58,7 +58,7 @@ systemctl status platform-backup.timer # 平台本機備份排程
 | Streamlit | `streamlit run app.py --server.baseUrlPath=/your-path` |
 | Next.js | `next.config.js` → `basePath: '/your-path'` |
 | FastAPI | `app = FastAPI(root_path="/your-path")` |
-| Vite (prod) | `vite.config.ts` → `base: '/your-path'` |
+| Vite (prod) | `vite.config.ts` → `base: '/your-path'` ＋ `preview.allowedHosts: ['raphtools.com']`（缺後者 = 整站 `Blocked request`） |
 
 ## 初次安裝 / 更新 Caddy binary
 

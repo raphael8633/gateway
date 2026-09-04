@@ -23,6 +23,12 @@
 # proxy_auth_strip  — `import proxy_auth_strip /prefix PORT` inside a handle: auth-gate,
 #                     strip path prefix, then reverse_proxy. Use when the upstream
 #                     expects to receive paths without the gateway-side base path.
+#
+# Upstream checklist when adding a route (see MISTAKES.md G-001):
+#   * Vite `vite preview` frontends reject foreign Host headers by default and
+#     answer every request with "Blocked request. This host is not allowed".
+#     The project's vite.config.ts must set preview.allowedHosts: ['raphtools.com']
+#     (plus any future alias domain served by this Caddyfile).
 (auth_portal) {
 	forward_auth 127.0.0.1:9091 {
 		uri /auth/api/authz/forward-auth
