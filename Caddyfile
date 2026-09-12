@@ -139,6 +139,7 @@ raphtools.com {
 	# A small set of PWA shell assets are exposed publicly so expired/offline
 	# clients can still bootstrap and update; user data sits behind the API gate.
 	handle /reader/api* {
+		encode zstd gzip
 		import proxy_auth_strip /reader 3005
 	}
 	handle /reader {
