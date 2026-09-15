@@ -62,4 +62,4 @@ Whether a route is auth-protected lives in `Caddyfile` (search for `import proxy
 
 - raph-power plugin provides: task classification (S0-S3), TDD, verification, review gates, git discipline, debugging, subagent delegation, mistake tracking
 - This file should only contain project-specific rules and quick commands
-- MISTAKES.md is maintained per-project with entries specific to this codebase（gateway 的條目記「接新 upstream 時會踩的 routing/framework 坑」，非某單一專案的 bug）
+- `.mistakes/` registry（raph-mistakes CLI）is maintained per-project；gateway 的條目記「接新 upstream 時會踩的 routing/framework 坑」，非某單一專案的 bug（原 G-001 已轉為 `.mistakes/M-001`）

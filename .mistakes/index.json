@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": "M-001",
+      "title": "Vite preview blocks the Host header forwarded by the gateway (legacy G-001)",
+      "severity": "hard",
+      "triggers": {
+        "keywords": [
+          "vite preview",
+          "preview.allowedHosts",
+          "Blocked request",
+          "新增路由",
+          "new upstream"
+        ],
+        "files": [
+          "vite.config.ts",
+          "Caddyfile"
+        ]
+      },
+      "guard": {
+        "command": "curl -s -o /dev/null -w '%{http_code}' -H 'Host: raphtools.com' http://127.0.0.1:PORT/path/  # must be 200; vite.config preview.allowedHosts must include raphtools.com"
+      },
+      "path": "M-001-vite-preview-blocks-gateway-host-header.md"
+    }
+  ]
+}
