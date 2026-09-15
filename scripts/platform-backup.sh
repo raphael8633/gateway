@@ -96,7 +96,6 @@ main() {
     -name 'vps2-vpn.service' -o \
     -name 'health-manage.service' -o \
     -name 'task-hub.service' -o \
-    -name 'hermes-webui.service' -o \
     -name 'raph-reader-*' -o \
     -name 'bittensor-*' -o \
     -name 'global-auth.service' -o \
@@ -112,10 +111,6 @@ main() {
   fi
   if [[ -d "$DATA_DIR/raph-reader/uploads" ]]; then
     rsync -a --delete "$DATA_DIR/raph-reader/uploads/" "$MIRROR/raph-reader-uploads/"
-    mirror_count=$((mirror_count + 1))
-  fi
-  if [[ -d "$DATA_DIR/hermes-webui/state" ]]; then
-    rsync -a --delete "$DATA_DIR/hermes-webui/state/" "$MIRROR/hermes-webui-state/"
     mirror_count=$((mirror_count + 1))
   fi
 

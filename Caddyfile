@@ -202,15 +202,6 @@ raphtools.com {
 		import proxy_auth 8040
 	}
 
-	# ─── Hermes WebUI (hermes-webui.service :8877) ───────────────────────────
-	# Bare /hermes-webui redirects so <base href> computes correctly upstream.
-	handle /hermes-webui {
-		redir * /hermes-webui/ 308
-	}
-	handle /hermes-webui* {
-		import proxy_auth_strip /hermes-webui 8877
-	}
-
 	# ─── Public Share (public-share.service :8020) ───────────────────────────
 	# /public/private/* is auth-gated (Authelia ACL also enforces per-file
 	# subjects, see global-auth/config/configuration.yml).
