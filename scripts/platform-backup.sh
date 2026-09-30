@@ -7,6 +7,9 @@ BACKUP_ROOT="$DATA_DIR/backups"
 TODAY="$(date +%F)"
 DEST="$BACKUP_ROOT/$TODAY"
 MIRROR="$BACKUP_ROOT/mirror"
+# Large live DBs: one copy overwritten nightly (history lives off-site in restic,
+# see raph-vps-state/offsite.sh) so 7 daily + 4 weekly dirs do not each hold ~0.7G.
+LARGE="$BACKUP_ROOT/latest-large"
 START_TS="$(date +%s)"
 
 log() {
@@ -14,10 +17,10 @@ log() {
 }
 
 backup_sqlite() {
-  local src="$1"
+  local src="$1" root="${2:-$DEST/sqlite}"
   local rel out
   rel="${src#/home/ubuntu/}"
-  out="$DEST/sqlite/${rel}.backup"
+  out="$root/${rel}.backup"
   mkdir -p "$(dirname "$out")"
   sqlite3 "$src" ".backup '$out'"
 }
@@ -52,9 +55,11 @@ main() {
   local pg_count=0
   local config_count=0
   local mirror_count=0
+  local large_count=0
+  local secret_count=0
 
-  rm -rf "$DEST/sqlite" "$DEST/postgres" "$DEST/config"
-  mkdir -p "$DEST"/{sqlite,postgres,config/systemd,config/env,config/global-auth} "$MIRROR"
+  rm -rf "$DEST/sqlite" "$DEST/postgres" "$DEST/config" "$LARGE"
+  mkdir -p "$DEST"/{sqlite,postgres,config/systemd,config/env,config/global-auth,config/secrets} "$MIRROR" "$LARGE"
 
   log "backup start dest=$DEST"
 
@@ -66,11 +71,27 @@ main() {
       find "$DATA_DIR" -path "$BACKUP_ROOT" -prune -o -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -print
       find "$PROJECTS_DIR/global-auth/data" -maxdepth 1 -type f -name 'db.sqlite3' -print 2>/dev/null
       find "$PROJECTS_DIR/vps2-vpn/data" -maxdepth 1 -type f -name '*.db' -print 2>/dev/null
+      find "$PROJECTS_DIR/x-daily-digest/state" "$PROJECTS_DIR/raph-reader/backend/data" \
+        "$PROJECTS_DIR/hermes/cron" -maxdepth 1 -type f -name '*.db' -size +0 -print 2>/dev/null
+      find "$PROJECTS_DIR/hermes" -maxdepth 1 -type f -name '*.db' ! -name 'state.db' -size +0 -print
+    } | sort -u
+  )
+
+  while IFS= read -r db; do
+    backup_sqlite "$db" "$LARGE"
+    ((large_count += 1))
+  done < <(
+    {
+      find "$PROJECTS_DIR/hermes" -maxdepth 1 -type f -name 'state.db' -print
+      find /home/ubuntu/.codex -maxdepth 1 -type f -name '*.sqlite' ! -name 'logs_*' -print
     } | sort -u
   )
 
   if sudo -u postgres pg_dump health_manage | gzip > "$DEST/postgres/health_manage.sql.gz"; then
     pg_count=1
+  fi
+  if sudo -u postgres pg_dumpall --globals-only | gzip > "$DEST/postgres/globals.sql.gz"; then
+    ((pg_count += 1))
   fi
 
   rsync -a "$PROJECTS_DIR/global-auth/config/" "$DEST/config/global-auth/"
@@ -89,21 +110,31 @@ main() {
     } | sort -u
   )
 
-  find /etc/systemd/system -maxdepth 1 -type f \( \
-    -name 'maple-toolkit-*' -o \
-    -name 'polymarket-*' -o \
-    -name 'public-share.service' -o \
-    -name 'vps2-vpn.service' -o \
-    -name 'health-manage.service' -o \
-    -name 'task-hub.service' -o \
-    -name 'raph-reader-*' -o \
-    -name 'bittensor-*' -o \
-    -name 'global-auth.service' -o \
-    -name 'admin-ui.service' -o \
-    -name 'gateway-*' -o \
-    -name 'platform-backup.*' \
-  \) -exec cp -a {} "$DEST/config/systemd/" \;
+  # Every regular unit file: package units are symlinks, so this is the custom set.
+  find /etc/systemd/system -maxdepth 1 -type f -exec cp -a {} "$DEST/config/systemd/" \;
+  mkdir -p "$DEST/config/systemd/user"
+  find /home/ubuntu/.config/systemd/user -maxdepth 1 -type f -exec cp -a {} "$DEST/config/systemd/user/" \;
   config_count=$((config_count + 1))
+
+  # Long-lived secrets for a rebuild (short-lived OAuth tokens are re-login, not backed up).
+  # Only encrypted off-site copies leave this disk (restic); never add this dir to git.
+  local secret
+  for secret in /etc/wireguard /etc/outline-ss-server /etc/letsencrypt \
+      /home/ubuntu/.ssh /home/ubuntu/.secrets /home/ubuntu/.config/headless /home/ubuntu/.xurl \
+      /home/ubuntu/CLIProxyAPI/config.yaml /home/ubuntu/CLIProxyAPI/.local-key \
+      /home/ubuntu/.cli-proxy-api /home/ubuntu/data/yt_cookies.txt; do
+    [[ -e "$secret" ]] || continue
+    mkdir -p "$DEST/config/secrets$(dirname "$secret")"
+    cp -a "$secret" "$DEST/config/secrets$secret"
+    ((secret_count += 1))
+  done
+  while IFS= read -r env_file; do
+    mkdir -p "$DEST/config/secrets$(dirname "$env_file")"
+    install -m 600 "$env_file" "$DEST/config/secrets$env_file"
+    ((secret_count += 1))
+  done < <(find "$PROJECTS_DIR" -maxdepth 4 \( -name node_modules -o -name .git -o -name tmp \) -prune -o \
+             -type f \( -name '.env' -o -name '.env.local' -o -name '.envrc' \) -print)
+  chmod -R go-rwx "$DEST/config/secrets"
 
   if [[ -d "$DATA_DIR/public-share" ]]; then
     rsync -a --delete "$DATA_DIR/public-share/" "$MIRROR/public-share/"
@@ -121,7 +152,7 @@ main() {
   local elapsed size
   elapsed=$(( $(date +%s) - START_TS ))
   size="$(du -sh "$DEST" "$MIRROR" 2>/dev/null | awk '{total=total " " $1 ":" $2} END {gsub(/^ /, "", total); print total}')"
-  log "backup OK sqlite=$sqlite_count postgres=$pg_count config=$config_count mirrors=$mirror_count elapsed=${elapsed}s size=${size:-unknown}"
+  log "backup OK sqlite=$sqlite_count large=$large_count postgres=$pg_count secrets=$secret_count config=$config_count mirrors=$mirror_count elapsed=${elapsed}s size=${size:-unknown}"
 }
 
 main "$@"
