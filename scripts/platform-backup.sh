@@ -10,10 +10,21 @@ MIRROR="$BACKUP_ROOT/mirror"
 # Large live DBs: one copy overwritten nightly (history lives off-site in restic,
 # see raph-vps-state/offsite.sh) so 7 daily + 4 weekly dirs do not each hold ~0.7G.
 LARGE="$BACKUP_ROOT/latest-large"
+# offsite.sh takes a shared lock on this file, so it never uploads a half-written run.
+LOCK="$BACKUP_ROOT/.platform-backup.lock"
+# Written last, only when every step succeeded; watchdog.sh and restore-drill.sh trust it.
+COMPLETE=.complete
+NOTIFY=/home/ubuntu/projects/hermes/scripts/hermes-notify.sh
 START_TS="$(date +%s)"
+STEP=init
 
 log() {
   printf '[%s] %s\n' "$(date -Is)" "$*"
+}
+
+# $1 = file, $2 = footer pg_dump/pg_dumpall writes only after a full dump
+dump_ok() {
+  gzip -t "$1" 2>/dev/null && zcat "$1" | tail -n 20 | grep -q -- "$2"
 }
 
 backup_sqlite() {
@@ -57,12 +68,22 @@ main() {
   local mirror_count=0
   local large_count=0
   local secret_count=0
+  local failures=()
 
-  rm -rf "$DEST/sqlite" "$DEST/postgres" "$DEST/config" "$LARGE"
-  mkdir -p "$DEST"/{sqlite,postgres,config/systemd,config/env,config/global-auth,config/secrets} "$MIRROR" "$LARGE"
+  mkdir -p "$BACKUP_ROOT"
+  exec 8>"$LOCK"
+  flock 8
+  chmod 644 "$LOCK"
+  trap 'rc=$?; "$NOTIFY" "🔴 platform-backup 失敗（step=$STEP, exit=$rc），今天的 off-site 備份會缺這份
+journalctl -u platform-backup -n 50" || true; exit $rc' ERR
+
+  STEP=prepare
+  rm -rf "$DEST/sqlite" "$DEST/postgres" "$DEST/config" "$DEST/$COMPLETE" "$LARGE.new"
+  mkdir -p "$DEST"/{sqlite,postgres,config/systemd,config/env,config/global-auth,config/secrets} "$MIRROR" "$LARGE.new"
 
   log "backup start dest=$DEST"
 
+  STEP=sqlite
   while IFS= read -r db; do
     backup_sqlite "$db"
     ((sqlite_count += 1))
@@ -78,7 +99,7 @@ main() {
   )
 
   while IFS= read -r db; do
-    backup_sqlite "$db" "$LARGE"
+    backup_sqlite "$db" "$LARGE.new"
     ((large_count += 1))
   done < <(
     {
@@ -87,12 +108,22 @@ main() {
     } | sort -u
   )
 
-  if sudo -u postgres pg_dump health_manage | gzip > "$DEST/postgres/health_manage.sql.gz"; then
-    pg_count=1
-  fi
-  if sudo -u postgres pg_dumpall --globals-only | gzip > "$DEST/postgres/globals.sql.gz"; then
+  STEP=postgres
+  # A failed pg_dump still leaves a valid (truncated) gzip, so success = the dump's own footer.
+  sudo -u postgres pg_dump health_manage | gzip > "$DEST/postgres/health_manage.sql.gz" || true
+  if dump_ok "$DEST/postgres/health_manage.sql.gz" 'PostgreSQL database dump complete'; then
     ((pg_count += 1))
+  else
+    failures+=("pg_dump health_manage")
   fi
+  sudo -u postgres pg_dumpall --globals-only | gzip > "$DEST/postgres/globals.sql.gz" || true
+  if dump_ok "$DEST/postgres/globals.sql.gz" 'PostgreSQL database cluster dump complete'; then
+    ((pg_count += 1))
+  else
+    failures+=("pg_dumpall --globals-only")
+  fi
+
+  STEP=config
 
   rsync -a "$PROJECTS_DIR/global-auth/config/" "$DEST/config/global-auth/"
   config_count=$((config_count + 1))
@@ -145,9 +176,25 @@ main() {
     mirror_count=$((mirror_count + 1))
   fi
 
+  STEP=publish
+  rm -rf "$LARGE.old"
+  [[ -d "$LARGE" ]] && mv "$LARGE" "$LARGE.old"
+  mv "$LARGE.new" "$LARGE"
+  rm -rf "$LARGE.old"
+
   keep_recent_backups
 
   chown -R ubuntu:ubuntu "$BACKUP_ROOT"
+
+  if (( ${#failures[@]} > 0 )); then
+    "$NOTIFY" "🔴 platform-backup 不完整：${failures[*]}（今天的 dated dir 沒有 $COMPLETE）
+journalctl -u platform-backup -n 50" || true
+    log "backup INCOMPLETE: ${failures[*]}"
+    exit 1
+  fi
+  printf 'completed=%s sqlite=%s large=%s postgres=%s secrets=%s\n' \
+    "$(date -Is)" "$sqlite_count" "$large_count" "$pg_count" "$secret_count" > "$DEST/$COMPLETE"
+  chown ubuntu:ubuntu "$DEST/$COMPLETE"
 
   local elapsed size
   elapsed=$(( $(date +%s) - START_TS ))
