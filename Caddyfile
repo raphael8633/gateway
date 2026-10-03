@@ -95,11 +95,6 @@ raphtools.com {
 		reverse_proxy localhost:8502
 	}
 
-	# ─── Polymarket Address Tracker (Next.js, basePath /poly/tracker :3001) ──
-	handle /poly/tracker* {
-		import proxy_auth 3001
-	}
-
 	# ─── Maple Toolkit ───────────────────────────────────────────────────────
 	# Backend API: uvicorn app.main:app --port 8000
 	# Frontend: vite preview --base /maple-kit --port 4173

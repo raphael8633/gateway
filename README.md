@@ -48,7 +48,6 @@ systemctl status platform-backup.timer # 平台本機備份排程
 
 目前已註冊的 Next.js 專案有：
 
-- `/poly/tracker` → `polymarket-address-tracker`（port 3001）
 - `/health` → `health-manage`（port 3002，`NEXT_PUBLIC_BASE_PATH=/health`）
 
 ## 各語言 Base Path 設定
