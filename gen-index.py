@@ -25,7 +25,6 @@ OUTPUT_PATH = os.path.join(SCRIPT_DIR, 'www', 'index.html')
 # the catch-all '' rule must stay last.
 CATEGORY_RULES = [
     ('/auth-admin',  'Identity & Access'),
-    ('/poly',        'Polymarket'),
     ('/health',      'Personal'),
     ('/task-hub',    'Personal'),
     ('/reader',      'Personal'),

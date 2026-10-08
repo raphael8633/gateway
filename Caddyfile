@@ -84,17 +84,6 @@ raphtools.com {
 		import proxy_auth 5000
 	}
 
-	# ─── Polymarket — public Streamlit dashboards ───────────────────────────
-	# 啟動: streamlit run ... --server.baseUrlPath=/poly/<slug> --server.port=PORT
-	# PUBLIC (intentional): read-only research dashboard, no private user data.
-	handle /poly/simulation* {
-		reverse_proxy localhost:8501
-	}
-	# PUBLIC (intentional): read-only research dashboard, no private user data.
-	handle /poly/nothing-happens* {
-		reverse_proxy localhost:8502
-	}
-
 	# ─── Maple Toolkit ───────────────────────────────────────────────────────
 	# Backend API: uvicorn app.main:app --port 8000
 	# Frontend: vite preview --base /maple-kit --port 4173
