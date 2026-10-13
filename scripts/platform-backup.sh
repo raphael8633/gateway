@@ -89,7 +89,8 @@ journalctl -u platform-backup -n 50" || true; exit $rc' ERR
     ((sqlite_count += 1))
   done < <(
     {
-      find "$DATA_DIR" -path "$BACKUP_ROOT" -prune -o -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -print
+      find "$DATA_DIR" \( -path "$BACKUP_ROOT" -o -path "$DATA_DIR/*/backups" -o -path "$DATA_DIR/*-backups" \) -prune \
+        -o -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -print
       find "$PROJECTS_DIR/global-auth/data" -maxdepth 1 -type f -name 'db.sqlite3' -print 2>/dev/null
       find "$PROJECTS_DIR/vps2-vpn/data" -maxdepth 1 -type f -name '*.db' -print 2>/dev/null
       find "$PROJECTS_DIR/x-daily-digest/state" "$PROJECTS_DIR/raph-reader/backend/data" \
@@ -104,6 +105,9 @@ journalctl -u platform-backup -n 50" || true; exit $rc' ERR
   done < <(
     {
       find "$PROJECTS_DIR/hermes" -maxdepth 1 -type f -name 'state.db' -print
+      # Apps' own pre-migration snapshots (e.g. raph-reader/backups): one copy here, history in restic.
+      find "$DATA_DIR" -path "$BACKUP_ROOT" -prune -o \( -path "$DATA_DIR/*/backups/*" -o -path "$DATA_DIR/*-backups/*" \) \
+        -type f \( -name '*.db' -o -name '*.sqlite' -o -name '*.sqlite3' \) -print
       find /home/ubuntu/.codex -maxdepth 1 -type f -name '*.sqlite' ! -name 'logs_*' -print
     } | sort -u
   )
