@@ -84,23 +84,6 @@ raphtools.com {
 		import proxy_auth 5000
 	}
 
-	# ─── Maple Toolkit ───────────────────────────────────────────────────────
-	# Backend API: uvicorn app.main:app --port 8000
-	# Frontend: vite preview --base /maple-kit --port 4173
-	# Frontend fetches absolute /api/v2/... — /api* is therefore reserved here.
-	# PUBLIC (intentional): public calculator API for the Maple Toolkit app.
-	handle_path /maple-kit/api* {
-		reverse_proxy localhost:8000
-	}
-	# PUBLIC (intentional): public calculator API; reserved for Maple Toolkit absolute fetches.
-	handle /api* {
-		reverse_proxy localhost:8000
-	}
-	# PUBLIC (intentional): public calculator frontend.
-	handle /maple-kit* {
-		reverse_proxy localhost:4173
-	}
-
 	# ─── VPS2 WireGuard VPN 管理面板 (vps2-vpn.service :8011) ────────────────
 	# PUBLIC (intentional): app has its own admin password and device workflow.
 	handle_path /vpn* {

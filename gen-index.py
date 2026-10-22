@@ -29,7 +29,6 @@ CATEGORY_RULES = [
     ('/task-hub',    'Personal'),
     ('/reader',      'Personal'),
     ('/tao',         'Research'),
-    ('/maple',       'Tools'),
     ('/vpn',         'Tools'),
     ('/hermes',      'Tools'),
     ('/public',      'Sharing'),
