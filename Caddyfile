@@ -137,6 +137,20 @@ raphtools.com {
 	}
 
 	# ─── Raph Tools (raph-tools backend :3007 / frontend :5175) ─────────────────
+	# ─── Safe Pull (static, ~/projects/safe-pull/www; no upstream port) ──────
+	# Auth runs before strip_prefix inside route{} so Authelia sees /safe-pull/...
+	handle /safe-pull {
+		redir * /safe-pull/ 308
+	}
+	handle /safe-pull/* {
+		route {
+			import auth_portal
+			uri strip_prefix /safe-pull
+			root * /home/ubuntu/projects/safe-pull/www
+			file_server
+		}
+	}
+
 	# Codex-backed micro tools. Everything is auth-gated; the API is served under
 	# /tools/api and the backend expects the /tools prefix stripped.
 	handle /tools/api* {
