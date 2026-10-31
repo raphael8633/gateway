@@ -27,7 +27,7 @@
 - Streamlit 服務需加 `--server.baseUrlPath=<path>` 啟動參數才能正確處理靜態資源
 - Next.js 服務需在 `next.config.js` 設 `basePath`
 - FastAPI 服務需設 `root_path` 或掛在 sub-application
-- Vite `vite preview` 前端需設 `base` **和** `preview.allowedHosts: ['raphtools.com']`（Vite 預設擋非 localhost 的 Host header，症狀是外站全頁 `Blocked request`；見 `MISTAKES.md` G-001）
+- Vite `vite preview` 前端需設 `base` **和** `preview.allowedHosts: ['raphtools.com']`（Vite 預設擋非 localhost 的 Host header，症狀是外站全頁 `Blocked request`；見 `.mistakes/M-001`）
 
 ## Service Registry
 
@@ -58,4 +58,4 @@ Whether a route is auth-protected lives in `Caddyfile` (search for `import proxy
 
 - raph-power plugin provides: task classification (S0-S3), TDD, verification, review gates, git discipline, debugging, subagent delegation, mistake tracking
 - This file should only contain project-specific rules and quick commands
-- `.mistakes/` registry（raph-mistakes CLI）is maintained per-project；gateway 的條目記「接新 upstream 時會踩的 routing/framework 坑」，非某單一專案的 bug（原 G-001 已轉為 `.mistakes/M-001`）
+- `.mistakes/` registry（raph-mistakes CLI）is maintained per-project；gateway 的條目記「接新 upstream 時會踩的 routing/framework 坑」，非某單一專案的 bug
