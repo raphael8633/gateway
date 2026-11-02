@@ -177,23 +177,30 @@ raphtools.com {
 		import proxy_auth 8040
 	}
 
-	# ─── Public Share (public-share.service :8020) ───────────────────────────
-	# /public/private/* is auth-gated (Authelia ACL also enforces per-file
-	# subjects, see global-auth/config/configuration.yml).
+	# ─── raph-lib (raph-lib.service :8020) ───────────────────────────────────
+	# /lib/private/* is auth-gated (Authelia ACL in
+	# global-auth/config/configuration.yml).
 	# Legacy private login/logout URLs redirect into the SSO entry to avoid the
 	# 403 dead-end described in M-008.
-	handle /public/private/login* {
-		redir * /public/private/ 302
+	handle /lib/private/login* {
+		redir * /lib/private/ 302
 	}
-	handle /public/private/logout* {
-		redir * /public/private/ 302
+	handle /lib/private/logout* {
+		redir * /lib/private/ 302
 	}
-	handle /public/private* {
-		import proxy_auth_strip /public 8020
+	handle /lib/private* {
+		import proxy_auth_strip /lib 8020
 	}
-	# PUBLIC (intentional): public file share; private subtree is handled above.
-	handle_path /public* {
+	# PUBLIC (intentional): raph-lib public shelf; private subtree is handled above.
+	handle_path /lib/public* {
 		reverse_proxy localhost:8020
+	}
+	# Old /public URLs (already shared links) → /lib; 308 keeps POST bodies.
+	handle_path /public/private* {
+		redir * /lib/private{uri} 308
+	}
+	handle_path /public* {
+		redir * /lib/public{uri} 308
 	}
 
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────
