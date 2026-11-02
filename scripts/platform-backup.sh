@@ -171,8 +171,8 @@ journalctl -u platform-backup -n 50" || true; exit $rc' ERR
              -type f \( -name '.env' -o -name '.env.local' -o -name '.envrc' \) -print)
   chmod -R go-rwx "$DEST/config/secrets"
 
-  if [[ -d "$DATA_DIR/public-share" ]]; then
-    rsync -a --delete "$DATA_DIR/public-share/" "$MIRROR/public-share/"
+  if [[ -d "$DATA_DIR/raph-lib" ]]; then
+    rsync -a --delete "$DATA_DIR/raph-lib/" "$MIRROR/raph-lib/"
     mirror_count=$((mirror_count + 1))
   fi
   if [[ -d "$DATA_DIR/raph-reader/uploads" ]]; then

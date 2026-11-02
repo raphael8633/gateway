@@ -145,6 +145,11 @@ def best_port(path, ports):
     ]
     if candidates:
         return ports[max(candidates, key=len)]
+    # A prefix with no handle of its own (e.g. /lib → /lib/public, /lib/private)
+    # takes the port its child handles share.
+    children = {ports[k] for k in ports if k.startswith(path + '/')}
+    if len(children) == 1:
+        return children.pop()
     return None
 
 
