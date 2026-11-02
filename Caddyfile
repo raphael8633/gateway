@@ -191,9 +191,17 @@ raphtools.com {
 	handle /lib/private* {
 		import proxy_auth_strip /lib 8020
 	}
-	# PUBLIC (intentional): raph-lib public shelf; private subtree is handled above.
-	handle_path /lib/public* {
-		reverse_proxy localhost:8020
+	# PUBLIC (intentional): raph-lib public shelf, static assets, /lib/ → 302
+	# /lib/private/; private subtree is handled above. Client-sent SSO headers
+	# are dropped so only the forward_auth path can assert a user.
+	handle_path /lib/* {
+		reverse_proxy localhost:8020 {
+			header_up -Remote-User
+			header_up -Remote-Groups
+		}
+	}
+	handle /lib {
+		redir * /lib/ 308
 	}
 	# Old /public URLs (already shared links) → /lib; 308 keeps POST bodies.
 	handle_path /public/private* {
