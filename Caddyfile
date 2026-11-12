@@ -177,6 +177,12 @@ raphtools.com {
 		import proxy_auth 8040
 	}
 
+	# ─── Crisis Watch (crisis-watch-web.service :8001) ───────────────────────
+	# Read-only viewer over ~/data/crisis-watch; Authelia group:crisis-watch. App handles its own prefix (no strip).
+	handle /crisis-watch* {
+		import proxy_auth 8001
+	}
+
 	# ─── raph-lib (raph-lib.service :8020) ───────────────────────────────────
 	# /lib/private/* is auth-gated (Authelia ACL in
 	# global-auth/config/configuration.yml).
