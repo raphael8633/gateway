@@ -30,7 +30,6 @@ CATEGORY_RULES = [
     ('/reader',      'Personal'),
     ('/tao',         'Research'),
     ('/vpn',         'Tools'),
-    ('/hermes',      'Tools'),
     ('/lib',         'Library'),
     ('',             'Other'),
 ]
