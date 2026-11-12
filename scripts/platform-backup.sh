@@ -14,7 +14,7 @@ LARGE="$BACKUP_ROOT/latest-large"
 LOCK="$BACKUP_ROOT/.platform-backup.lock"
 # Written last, only when every step succeeded; watchdog.sh and restore-drill.sh trust it.
 COMPLETE=.complete
-NOTIFY=/home/ubuntu/projects/hermes/scripts/hermes-notify.sh
+NOTIFY=/home/ubuntu/projects/raph-platform/scripts/notify.sh
 START_TS="$(date +%s)"
 STEP=init
 
