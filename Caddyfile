@@ -24,7 +24,7 @@
 #                     strip path prefix, then reverse_proxy. Use when the upstream
 #                     expects to receive paths without the gateway-side base path.
 #
-# Upstream checklist when adding a route (see MISTAKES.md G-001):
+# Upstream checklist when adding a route (see .mistakes/M-001):
 #   * Vite `vite preview` frontends reject foreign Host headers by default and
 #     answer every request with "Blocked request. This host is not allowed".
 #     The project's vite.config.ts must set preview.allowedHosts: ['raphtools.com']
@@ -53,6 +53,20 @@
 
 raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
+
+	# ─── Access log ──────────────────────────────────────────────────────────
+	# JSON lines for scripts/access-stats.py (weekly human/machine counts in the
+	# morning brief). Cookie/Authorization headers stay redacted; only the watcher
+	# `locale` cookie value is copied out so the en-locale share is measurable.
+	log {
+		output file /home/ubuntu/data/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 20
+			roll_keep_for 2160h
+		}
+		format json
+	}
+	log_append locale {http.request.cookie.locale}
 
 	# ─── Navigation Page (root) ──────────────────────────────────────────────
 	handle / {
@@ -136,7 +150,6 @@ raphtools.com {
 		import proxy_auth 5174
 	}
 
-	# ─── Raph Tools (raph-tools backend :3007 / frontend :5175) ─────────────────
 	# ─── EVM Utils (~/projects/evm-utils, stdlib WSGI :8000; grove, safe-pull) ─
 	handle /safe-pull* {
 		redir * /evm-utils/safe-pull/ 308
@@ -201,4 +214,10 @@ raphtools.com {
 	# ─── 新服務範本 ───────────────────────────────────────────────────────────
 	# Public:    handle /your-path* { reverse_proxy localhost:PORT }
 	# Protected: handle /your-path* { import proxy_auth PORT }
+
+	# Unrouted paths (scanners, retired routes) get a real 404 instead of an
+	# empty 200, so the access log separates them from served pages.
+	handle {
+		respond "Not Found" 404
+	}
 }
