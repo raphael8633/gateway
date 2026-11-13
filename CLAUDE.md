@@ -1,9 +1,5 @@
 # CLAUDE.md — PROJECT RULES
 
-## Entry Point
-
-`/raph-core` is enforced via raph-power plugin hook (UserPromptSubmit) — no manual reminder needed.
-
 ## Quick Commands
 
 - **validate:** `caddy validate --adapter caddyfile --config <副本>`（gateway-watch 一存檔就 reload，先驗副本再覆蓋 `Caddyfile`）
