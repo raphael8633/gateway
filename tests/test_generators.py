@@ -1,10 +1,13 @@
 """gen-service-registry.py (Caddyfile → ports, CLAUDE.md splice) and gen-index.py (cards → HTML)."""
 import importlib.util
 import pathlib
+import sys
 import tempfile
 import unittest
 
 GATEWAY = pathlib.Path(__file__).resolve().parent.parent
+# gen-*.py import readme_table from their own directory; workspace-tests runs pytest from raph-platform.
+sys.path.insert(0, str(GATEWAY))
 
 
 def load(name, filename):
