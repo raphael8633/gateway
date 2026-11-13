@@ -133,6 +133,15 @@ class SummaryTest(unittest.TestCase):
         line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
         self.assertIn('試算器展開 3／2', line)
 
+    def test_unknown_beacon_event_names_never_reach_the_report(self):
+        beacon = {'Sec-Fetch-Dest': ['empty']}
+        es = [entry('/tao-conviction/api/beacon?e=buy-cheap-pills', headers=beacon, status=204),
+              entry('/tao-conviction/api/beacon?e=simulator-open', headers=beacon, status=204)]
+        s = A.summarize(es, LOCAL)
+        self.assertEqual(list(s['events']), ['simulator-open'])
+        line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
+        self.assertNotIn('pills', line)
+
     def test_empty_window_still_reports(self):
         line = A.render_line(A.summarize([], LOCAL), dt.date(2026, 11, 6), dt.date(2026, 11, 12))
         self.assertTrue(line.startswith('🟢 '))

@@ -104,7 +104,10 @@ def classify(e, local_ips):
     browser = ua.startswith('Mozilla/') and not BOT_RE.search(ua)
     if path == BEACON_PATH and browser and 200 <= status < 300:
         m = re.search(r'(?:^|&)e=([A-Za-z0-9_-]{1,40})', uri.partition('?')[2])
-        out['kind'], out['event'] = ('event', m.group(1)) if m else ('asset', None)
+        # The route is public: only known event names count, so nobody can write
+        # arbitrary text into the morning brief through the query string.
+        known = m.group(1) if m and m.group(1) in EVENT_LABELS else None
+        out['kind'], out['event'] = ('event', known) if known else ('asset', None)
         return out
     if ua.startswith(LOCAL_UA):
         kind = 'local'
@@ -158,7 +161,7 @@ def render_line(s, start, end):
             item += f'（{pages}；en {v["locale"].get("en", 0)}）'
         parts.append(item)
     body = f'（瀏覽／訪客）：{"，".join(parts)}' if parts else ''
-    events = '、'.join(f'{EVENT_LABELS.get(k, k)} {v["count"]}／{v["visitors"]}'
+    events = '、'.join(f'{EVENT_LABELS[k]} {v["count"]}／{v["visitors"]}'
                        for k, v in sorted(s['events'].items()))
     body += f'｜事件：{events}' if events else ''
     return (f'{head}{body}｜本機瀏覽器（Shadowsocks 等）{s["local_browser"]}、機器 {s["machine"]}、'
