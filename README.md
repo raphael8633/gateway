@@ -77,7 +77,7 @@ sudo systemctl daemon-reload && sudo systemctl restart caddy
 
 ## Platform Maintenance
 
-本機滾動備份：`scripts/platform-backup.sh`，由 `platform-backup.timer` 每日 04:30 台北執行；異地上傳、時效監看與還原演練在 raph-vps-state。
+本機滾動備份：`scripts/platform-backup.sh`，由 `platform-backup.timer` 每日 04:30 台北執行。`~/data/backups/` 只留最新 2 份日期目錄（另保證留最新一份有 `.complete` 的），歷史版本在 restic 異地快照；異地上傳、時效監看與還原演練在 raph-vps-state。
 
 ## 與 global-auth 的關係
 

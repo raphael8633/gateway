@@ -8,8 +8,9 @@ TODAY="$(date +%F)"
 DEST="$BACKUP_ROOT/$TODAY"
 MIRROR="$BACKUP_ROOT/mirror"
 # Large live DBs: one copy overwritten nightly (history lives off-site in restic,
-# see raph-vps-state/offsite.sh) so 7 daily + 4 weekly dirs do not each hold ~0.7G.
+# see raph-vps-state/offsite.sh) so the dated dirs do not each hold ~0.3G more.
 LARGE="$BACKUP_ROOT/latest-large"
+KEEP_LOCAL=2
 # offsite.sh takes a shared lock on this file, so it never uploads a half-written run.
 LOCK="$BACKUP_ROOT/.platform-backup.lock"
 # Written last, only when every step succeeded; watchdog.sh and restore-drill.sh trust it.
@@ -36,27 +37,30 @@ backup_sqlite() {
   sqlite3 "$src" ".backup '$out'"
 }
 
+# Local dated dirs: the newest KEEP_LOCAL, plus the newest one with $COMPLETE so a run of
+# failed nights never leaves the readers (watchdog, restore-drill, RESTORE.md) without a
+# complete copy. History lives off-site in restic (raph-vps-state/offsite.sh forget policy).
 keep_recent_backups() {
   local -A keep=()
   local dirs=()
-  local dir base weekly=0 count=0
+  local base count=0 have_complete=0
 
   mapfile -t dirs < <(find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -regextype posix-extended -regex '.*/[0-9]{4}-[0-9]{2}-[0-9]{2}' -printf '%f\n' | sort -r)
 
   for base in "${dirs[@]}"; do
-    if (( count < 7 )); then
+    if (( count < KEEP_LOCAL )); then
       keep["$base"]=1
       ((count += 1))
     fi
-    if [[ "$(date -d "$base" +%u)" == "7" && $weekly -lt 4 ]]; then
+    if (( ! have_complete )) && [[ -e "$BACKUP_ROOT/$base/$COMPLETE" ]]; then
       keep["$base"]=1
-      ((weekly += 1))
+      have_complete=1
     fi
   done
 
   for base in "${dirs[@]}"; do
     if [[ -z "${keep[$base]:-}" ]]; then
-      rm -rf "$BACKUP_ROOT/$base"
+      rm -rf "${BACKUP_ROOT:?}/$base"
     fi
   done
 }
@@ -205,4 +209,7 @@ journalctl -u platform-backup -n 50" || true
   log "backup OK sqlite=$sqlite_count large=$large_count postgres=$pg_count secrets=$secret_count config=$config_count mirrors=$mirror_count elapsed=${elapsed}s size=${size:-unknown}"
 }
 
-main "$@"
+# Sourcing (tests) defines the functions without running a backup.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
