@@ -6,28 +6,20 @@
 
 ## Quick Commands
 
-- **reload:** `caddy reload --config Caddyfile`
-- **start:** `caddy run --config Caddyfile`
-- **validate:** `caddy validate --config Caddyfile`
-- **gen-index:** `python3 gen-index.py`
-- **watch:** `systemctl status gateway-watch` (systemd 服務，開機自動啟動)
+- **validate:** `caddy validate --adapter caddyfile --config <副本>`（gateway-watch 一存檔就 reload，先驗副本再覆蓋 `Caddyfile`）
+- **reload:** `caddy reload --config Caddyfile`（存檔時 gateway-watch 自動執行）
+- **gen-index:** `python3 gen-index.py`；**registry:** `python3 gen-service-registry.py`
+- **test:** `python3 -m pytest -q tests`
+- **watch:** `systemctl status gateway-watch`
 - **build:** N/A
-- **test:** N/A
-- **lint:** `caddy validate --config Caddyfile`
 
 ## Project Context
 
-- **Domain:** `raphtools.com` (Caddy auto-HTTPS / Let's Encrypt; no Cloudflare API required)
-- 需維護的檔案：`Caddyfile`（routing）；`www/index.html` 由 `gen-index.py` 自動生成，勿手動編輯
-- **新增服務流程：**
-  1. `Caddyfile` 加 handle 區塊 → `caddy reload`（watcher 自動觸發）
-  2. `../README.md` 加一列並填 `Gateway` 欄 → `www/index.html` 自動更新（watcher 自動觸發）
-- 若 `gateway-watch.service` 異常，手動執行：`python3 gen-index.py` 重生成 index.html
-- **`www/index.html` source of truth：** `../README.md` 的 `Gateway` 欄（見 workspace CLAUDE.md 格式說明）
-- Streamlit 服務需加 `--server.baseUrlPath=<path>` 啟動參數才能正確處理靜態資源
-- Next.js 服務需在 `next.config.js` 設 `basePath`
-- FastAPI 服務需設 `root_path` 或掛在 sub-application
-- Vite `vite preview` 前端需設 `base` **和** `preview.allowedHosts: ['raphtools.com']`（Vite 預設擋非 localhost 的 Host header，症狀是外站全頁 `Blocked request`；見 `.mistakes/M-001`）
+- **Domain:** `raphtools.com`（Caddy 自動向 Let's Encrypt 申請與續期，無 certbot）
+- 需維護的檔案：`Caddyfile`（routing）；`www/index.html` 與下方 registry 由 `../README.md` 專案表生成（`readme_table.py` 是唯一 parser），勿手改
+- 新增服務流程與各框架 base path 設定見 `README.md`「新增服務」；受保護路由要在 global-auth 加 ACL，`tests/test_acl_routes.py` 擋死規則
+- Access log 在 `~/data/caddy/access.log`，每週統計 `scripts/access_stats.py` 進晨報（見 `README.md`）
+- 本 repo 是 GitHub public：commit、文件不貼 log 樣本行、IP、帳號細節或 secret
 
 ## Service Registry
 
@@ -57,4 +49,4 @@ Whether a route is auth-protected lives in `Caddyfile` (search for `import proxy
 
 - raph-power plugin provides: task classification (S0-S3), TDD, verification, review gates, git discipline, debugging, subagent delegation, mistake tracking
 - This file should only contain project-specific rules and quick commands
-- `.mistakes/` registry（raph-mistakes CLI）is maintained per-project；gateway 的條目記「接新 upstream 時會踩的 routing/framework 坑」，非某單一專案的 bug
+- `.mistakes/`（raph-mistakes CLI）記接新 upstream 時會踩的 routing／framework 坑

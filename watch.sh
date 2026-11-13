@@ -5,8 +5,7 @@
 # Caddyfile 變更 → caddy reload
 #
 # 需求: inotify-tools (apt install inotify-tools)
-# 用法: ./watch.sh            (前景執行)
-#       nohup ./watch.sh &    (背景執行)
+# 正式由 deploy/gateway-watch.service 執行；手動除錯可前景跑 ./watch.sh
 
 set -euo pipefail
 
