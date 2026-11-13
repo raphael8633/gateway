@@ -11,6 +11,8 @@ Kinds:
           client navigation (Rsc header, not a prefetch); 2xx/304 only
   asset   other browser traffic (scripts, API calls, prefetches, login redirects)
   local_browser  browser page view from this host's IP (Shadowsocks clients exit here)
+  event   watcher beacon (GET /tao-conviction/api/beacon?e=<name>, 2xx) from a browser:
+          client-only interactions such as opening the emission simulator
   local   other traffic from this host (agents, curl, headless e2e) and the vps-sweep probe
   machine everything else from outside (bots, scripts, scanners, 4xx/5xx)
 
@@ -40,6 +42,9 @@ BOT_RE = re.compile(r'bot|crawl|spider|slurp|preview|headless|python|curl|wget|g
                     r'scan|monitor|fetch|http-client|okhttp|axios|node|libwww|facebookexternalhit',
                     re.I)
 LOCAL_UA = ('vps-sweep/',)
+# Client-only interactions the watcher reports with GET <BEACON_PATH>?e=<event> (204).
+BEACON_PATH = '/tao-conviction/api/beacon'
+EVENT_LABELS = {'simulator-open': '試算器展開'}
 ASSET_RE = re.compile(r'/_next/|/assets/|\.(js|mjs|css|map|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|json|txt|xml|webmanifest)$', re.I)
 
 
@@ -97,6 +102,10 @@ def classify(e, local_ips):
            'locale': e.get('locale') or 'zh', 'visitor': f'{ip}|{ua}'}
 
     browser = ua.startswith('Mozilla/') and not BOT_RE.search(ua)
+    if path == BEACON_PATH and browser and 200 <= status < 300:
+        m = re.search(r'(?:^|&)e=([A-Za-z0-9_-]{1,40})', uri.partition('?')[2])
+        out['kind'], out['event'] = ('event', m.group(1)) if m else ('asset', None)
+        return out
     if ua.startswith(LOCAL_UA):
         kind = 'local'
     elif is_local_ip(ip, local_ips):
@@ -112,10 +121,15 @@ def classify(e, local_ips):
 
 
 def summarize(entries, local_ips):
-    s = {'services': {}, 'machine': 0, 'local': 0, 'local_browser': 0, 'asset': 0, 'human': 0}
-    visitors = {}
+    s = {'services': {}, 'events': {}, 'machine': 0, 'local': 0, 'local_browser': 0, 'asset': 0, 'human': 0}
+    visitors, event_visitors = {}, {}
     for e in entries:
         c = classify(e, local_ips)
+        if c['kind'] == 'event':
+            ev = s['events'].setdefault(c['event'], {'count': 0, 'visitors': 0})
+            ev['count'] += 1
+            event_visitors.setdefault(c['event'], set()).add(c['visitor'])
+            continue
         if c['kind'] != 'human':
             s[c['kind']] += 1
             continue
@@ -128,6 +142,8 @@ def summarize(entries, local_ips):
             svc['locale'][c['locale']] = svc['locale'].get(c['locale'], 0) + 1
     for name, v in visitors.items():
         s['services'][name]['visitors'] = len(v)
+    for name, v in event_visitors.items():
+        s['events'][name]['visitors'] = len(v)
     return s
 
 
@@ -142,6 +158,9 @@ def render_line(s, start, end):
             item += f'（{pages}；en {v["locale"].get("en", 0)}）'
         parts.append(item)
     body = f'（瀏覽／訪客）：{"，".join(parts)}' if parts else ''
+    events = '、'.join(f'{EVENT_LABELS.get(k, k)} {v["count"]}／{v["visitors"]}'
+                       for k, v in sorted(s['events'].items()))
+    body += f'｜事件：{events}' if events else ''
     return (f'{head}{body}｜本機瀏覽器（Shadowsocks 等）{s["local_browser"]}、機器 {s["machine"]}、'
             f'本機健檢 {s["local"]}、其他瀏覽器請求 {s["asset"]}')
 

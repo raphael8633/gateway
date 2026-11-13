@@ -44,7 +44,7 @@ systemctl status platform-backup.timer  # 平台本機備份排程
 - Caddy 把 `raphtools.com` 的請求寫成 JSON lines 到 `~/data/caddy/access.log`（50MiB 輪替、留 20 份、最多 90 天）。Cookie 與 Authorization 由 Caddy 遮蔽；只另外抄出 watcher 的 `locale` cookie 值，用來算 en 介面比例。
 - `scripts/access_stats.py` 每週一 07:20 台北由 raph-platform 的 `gateway-access-stats` job 執行，輸出一行 🟢 進 07:30 晨報，並追加一筆到 `~/data/caddy/weekly.jsonl`。
 - 分類：人類頁面瀏覽＝外部瀏覽器的 document 載入或 Next.js RSC 導覽（不含 prefetch）且 2xx／304；其他瀏覽器請求（靜態檔、API、被導去登入）；機器（非瀏覽器 UA、bot、4xx／5xx）；本機瀏覽器（本機 IP 的真瀏覽器導覽，Shadowsocks 用戶從這台出去，另列一格）；本機健檢（其他本機請求與 `vps-sweep/1`）。`/tao-conviction` 另分子頁與 en 數。
-- 量不到的：純 client 端互動（例如 watcher `/emission` 的試算器展開）不發請求，不會出現在 log。
+- 純 client 端互動靠 beacon：watcher 在 `/emission` 試算器第一次展開時送 `GET /tao-conviction/api/beacon?e=simulator-open`（204），統計依 `e` 計數、列在晨報的「事件」。新增事件時在 `EVENT_LABELS` 加中文名。其他不發請求的互動量不到。
 
 ## 新增服務
 

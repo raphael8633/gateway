@@ -119,6 +119,20 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(s['local_browser'], 1)
         self.assertIn('本機瀏覽器（Shadowsocks 等）1', line)
 
+    def test_watcher_beacon_events_are_counted_per_event(self):
+        beacon = {'Sec-Fetch-Dest': ['empty']}
+        es = [
+            entry('/tao-conviction/api/beacon?e=simulator-open', headers=beacon, status=204),
+            entry('/tao-conviction/api/beacon?e=simulator-open', headers=beacon, status=204, ip='198.51.100.9'),
+            entry('/tao-conviction/api/beacon?e=simulator-open', headers=beacon, status=204),
+            entry('/tao-conviction/api/beacon?e=simulator-open', ua='curl/8.5.0', status=204),
+        ]
+        s = A.summarize(es, LOCAL)
+        self.assertEqual(s['events'], {'simulator-open': {'count': 3, 'visitors': 2}})
+        self.assertEqual(s['human'], 0)
+        line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
+        self.assertIn('試算器展開 3／2', line)
+
     def test_empty_window_still_reports(self):
         line = A.render_line(A.summarize([], LOCAL), dt.date(2026, 11, 6), dt.date(2026, 11, 12))
         self.assertTrue(line.startswith('🟢 '))
