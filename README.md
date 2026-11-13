@@ -46,6 +46,10 @@ systemctl status platform-backup.timer  # 平台本機備份排程
 - 分類：人類頁面瀏覽＝外部瀏覽器的 document 載入或 Next.js RSC 導覽（不含 prefetch）且 2xx／304；其他瀏覽器請求（靜態檔、API、被導去登入）；機器（非瀏覽器 UA、bot、4xx／5xx）；本機瀏覽器（本機 IP 的真瀏覽器導覽，Shadowsocks 用戶從這台出去，另列一格）；本機健檢（其他本機請求與 `vps-sweep/1`）。`/tao-conviction` 另分子頁與 en 數。
 - 純 client 端互動靠 beacon：watcher 在 `/emission` 試算器第一次展開時送 `GET /tao-conviction/api/beacon?e=simulator-open`（204），統計只計 `EVENT_LABELS` 白名單內的 `e`（路由公開，其他名稱一律不進晨報），列在晨報的「事件」；新增事件時在 `EVENT_LABELS` 加中文名。白名單事件仍可被刻意灌量，數字是上限。其他不發請求的互動量不到。
 
+## 基線回應標頭
+
+Caddy 對全站回應補四個預設標頭：`Strict-Transport-Security`（`max-age=86400`）、`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: SAMEORIGIN`。每個都用 `?`，上游沒送才補，所以服務或 Authelia 自己送的值會保留。四個標頭各寫一條 `header` 指令：寫在同一個區塊時，Caddy 只在四個都不存在時才套用整組。CSP 由各服務自己負責。新服務若要被別的網域嵌入，自己送 `X-Frame-Options` 或 CSP `frame-ancestors`。
+
 ## 新增服務
 
 1. 在 `Caddyfile` 加 handle 區塊（公開：`reverse_proxy localhost:PORT`；受保護：`import proxy_auth PORT`），validate 後存檔
