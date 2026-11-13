@@ -155,7 +155,7 @@
           <div class="status-dot" data-state="unknown" data-path="/auth-admin" title="unknown"></div>
         </div>
         <div class="card-title">Auth Admin</div>
-        <div class="card-desc">內部工具 SSO / 認證入口，透過 Authelia + Caddy forward_auth 保護 /health、/task-hub</div>
+        <div class="card-desc">內部工具 SSO / 認證入口，透過 Authelia + Caddy forward_auth 保護 Caddyfile 中 import proxy_auth* 的路由；/auth-admin 管帳號與群組（ACL 手改 config/configuration.yml）</div>
         <div class="card-path">/auth-admin</div>
       </a>
 
@@ -209,7 +209,7 @@
           <div class="status-dot" data-state="unknown" data-path="/tao-conviction" title="unknown"></div>
         </div>
         <div class="card-title">Tao Conviction Dashboard</div>
-        <div class="card-desc">Monorepo（2026-07-16 由 subtensor-hub + bittensor-conviction-watcher 合併，各子樹 git history 保留）：hub/ = subtensor 知識基地（pinned upstream + rule cards + PR/codebase 問答 SOP + 散落位置導航，整合原 tao-rules-capare 分析）；apps/watcher/ = Bittensor conviction 監控 dashboard（TaoStats 每日快照，依 netuid 追蹤 owner / non-owner locked 量與 1d / 7d 變動排名，prod /tao-conviction，hub rule card 下游 consumer）；apps/research-viewer/ = research 卡片唯讀 viewer（/tao-research）。Claude 入口 CLAUDE.md 路由三個子樹；PR 掃描由 raph-platform 排程執行 hub/scripts/pr-watch/、週報儲存在 ~/data/raph-lib</div>
+        <div class="card-desc">Monorepo：hub/ = subtensor 知識基地（pinned upstream、rule cards、subnet／actor research 登記、夜間研究與 version-watch）；apps/watcher/ = Bittensor conviction 公開 dashboard（鏈上 tick 時間序列，hub rule card 的下游 consumer）；apps/research-viewer/ = research 卡片唯讀 viewer。CLAUDE.md 路由三個子樹；hub 排程由 raph-platform jobs 執行，報告寫 ~/data/raph-lib</div>
         <div class="card-path">/tao-conviction</div>
       </a>
 
@@ -219,7 +219,7 @@
           <div class="status-dot" data-state="unknown" data-path="/tao-research" title="unknown"></div>
         </div>
         <div class="card-title">TAO Research Viewer</div>
-        <div class="card-desc">Monorepo（2026-07-16 由 subtensor-hub + bittensor-conviction-watcher 合併，各子樹 git history 保留）：hub/ = subtensor 知識基地（pinned upstream + rule cards + PR/codebase 問答 SOP + 散落位置導航，整合原 tao-rules-capare 分析）；apps/watcher/ = Bittensor conviction 監控 dashboard（TaoStats 每日快照，依 netuid 追蹤 owner / non-owner locked 量與 1d / 7d 變動排名，prod /tao-conviction，hub rule card 下游 consumer）；apps/research-viewer/ = research 卡片唯讀 viewer（/tao-research）。Claude 入口 CLAUDE.md 路由三個子樹；PR 掃描由 raph-platform 排程執行 hub/scripts/pr-watch/、週報儲存在 ~/data/raph-lib</div>
+        <div class="card-desc">Monorepo：hub/ = subtensor 知識基地（pinned upstream、rule cards、subnet／actor research 登記、夜間研究與 version-watch）；apps/watcher/ = Bittensor conviction 公開 dashboard（鏈上 tick 時間序列，hub rule card 的下游 consumer）；apps/research-viewer/ = research 卡片唯讀 viewer。CLAUDE.md 路由三個子樹；hub 排程由 raph-platform jobs 執行，報告寫 ~/data/raph-lib</div>
         <div class="card-path">/tao-research</div>
       </a>
 
@@ -236,7 +236,7 @@
           <div class="status-dot" data-state="unknown" data-path="/vpn" title="unknown"></div>
         </div>
         <div class="card-title">VPS2 VPN</div>
-        <div class="card-desc">VPS2 WireGuard VPN 管理面板，透過網頁新增裝置、下載 .conf/QR code，管理員管理用戶與裝置</div>
+        <div class="card-desc">VPN 管理面板：VPS2 WireGuard 與兩台 Shadowsocks（本機 outline-ss-server 聽 8443）的用戶與裝置，網頁下載 .conf／QR code；每日 livecheck user timer</div>
         <div class="card-path">/vpn</div>
       </a>
 
