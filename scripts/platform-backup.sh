@@ -155,8 +155,7 @@ journalctl -u platform-backup -n 50" || true; exit $rc' ERR
   local secret
   for secret in /etc/wireguard /etc/outline-ss-server /etc/letsencrypt \
       /home/ubuntu/.ssh /home/ubuntu/.secrets /home/ubuntu/.config/headless /home/ubuntu/.xurl \
-      /home/ubuntu/CLIProxyAPI/config.yaml /home/ubuntu/CLIProxyAPI/.local-key \
-      /home/ubuntu/.cli-proxy-api /home/ubuntu/data/yt_cookies.txt; do
+      /home/ubuntu/data/yt_cookies.txt; do
     [[ -e "$secret" ]] || continue
     mkdir -p "$DEST/config/secrets$(dirname "$secret")"
     cp -a "$secret" "$DEST/config/secrets$secret"
