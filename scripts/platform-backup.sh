@@ -128,7 +128,8 @@ journalctl -u platform-backup -n 50" || true; exit $rc' ERR
 
   STEP=config
 
-  rsync -a "$PROJECTS_DIR/global-auth/config/" "$DEST/config/global-auth/"
+  # admin-ui writes *.bak before every YAML rewrite; old account rules must not ride along.
+  rsync -a --exclude '*.bak' "$PROJECTS_DIR/global-auth/config/" "$DEST/config/global-auth/"
   config_count=$((config_count + 1))
 
   while IFS= read -r env_file; do
