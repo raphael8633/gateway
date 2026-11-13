@@ -10,7 +10,8 @@ Kinds:
   human   browser page view from outside this host: document load, or a Next.js
           client navigation (Rsc header, not a prefetch); 2xx/304 only
   asset   other browser traffic (scripts, API calls, prefetches, login redirects)
-  local   this host (agents, curl) and the vps-sweep self-check probe
+  local_browser  browser page view from this host's IP (Shadowsocks clients exit here)
+  local   other traffic from this host (agents, curl, headless e2e) and the vps-sweep probe
   machine everything else from outside (bots, scripts, scanners, 4xx/5xx)
 
 Usage: python3 scripts/access_stats.py [--days 7] [--no-history]
@@ -71,6 +72,18 @@ def is_local_ip(ip, local_ips):
         return False
 
 
+def _is_page_view(req, headers, path, status):
+    """Document load or Next.js client navigation (not a prefetch) that succeeded."""
+    if req.get('method', 'GET') != 'GET' or not (200 <= status < 300 or status == 304):
+        return False
+    if _h(headers, 'Rsc') == '1':
+        return not (_h(headers, 'Next-Router-Prefetch') or 'prefetch' in _h(headers, 'Sec-Purpose'))
+    dest = _h(headers, 'Sec-Fetch-Dest')
+    if dest:
+        return dest == 'document'
+    return 'text/html' in _h(headers, 'Accept') and not ASSET_RE.search(path)
+
+
 def classify(e, local_ips):
     req = e.get('request', {})
     headers = req.get('headers', {})
@@ -83,28 +96,23 @@ def classify(e, local_ips):
     out = {'service': svc, 'page': watcher_page(path) if svc == '/tao-conviction' else None,
            'locale': e.get('locale') or 'zh', 'visitor': f'{ip}|{ua}'}
 
-    if ua.startswith(LOCAL_UA) or is_local_ip(ip, local_ips):
+    browser = ua.startswith('Mozilla/') and not BOT_RE.search(ua)
+    if ua.startswith(LOCAL_UA):
         kind = 'local'
-    elif not ua or not ua.startswith('Mozilla/') or BOT_RE.search(ua) or status >= 400:
+    elif is_local_ip(ip, local_ips):
+        # Shadowsocks clients reach the site from this host's IP; keep their page
+        # views apart from agent/curl traffic instead of guessing which is which.
+        kind = 'local_browser' if browser and _is_page_view(req, headers, path, status) else 'local'
+    elif not browser or status >= 400:
         kind = 'machine'
     else:
-        dest = _h(headers, 'Sec-Fetch-Dest')
-        rsc = _h(headers, 'Rsc') == '1'
-        prefetch = bool(_h(headers, 'Next-Router-Prefetch')) or 'prefetch' in _h(headers, 'Sec-Purpose')
-        ok = 200 <= status < 300 or status == 304
-        if rsc:
-            nav = not prefetch
-        elif dest:
-            nav = dest == 'document'
-        else:
-            nav = 'text/html' in _h(headers, 'Accept') and not ASSET_RE.search(path)
-        kind = 'human' if (nav and ok and req.get('method', 'GET') == 'GET') else 'asset'
+        kind = 'human' if _is_page_view(req, headers, path, status) else 'asset'
     out['kind'] = kind
     return out
 
 
 def summarize(entries, local_ips):
-    s = {'services': {}, 'machine': 0, 'local': 0, 'asset': 0, 'human': 0}
+    s = {'services': {}, 'machine': 0, 'local': 0, 'local_browser': 0, 'asset': 0, 'human': 0}
     visitors = {}
     for e in entries:
         c = classify(e, local_ips)
@@ -134,7 +142,8 @@ def render_line(s, start, end):
             item += f'（{pages}；en {v["locale"].get("en", 0)}）'
         parts.append(item)
     body = f'（瀏覽／訪客）：{"，".join(parts)}' if parts else ''
-    return f'{head}{body}｜機器 {s["machine"]}、本機健檢 {s["local"]}、其他瀏覽器請求 {s["asset"]}'
+    return (f'{head}{body}｜本機瀏覽器（Shadowsocks 等）{s["local_browser"]}、機器 {s["machine"]}、'
+            f'本機健檢 {s["local"]}、其他瀏覽器請求 {s["asset"]}')
 
 
 def _open(path):

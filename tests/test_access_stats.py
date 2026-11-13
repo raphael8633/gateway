@@ -54,7 +54,15 @@ class ClassifyTest(unittest.TestCase):
     def test_health_check_and_this_host_count_as_local(self):
         self.assertEqual(self.kind(entry('/tao-conviction', ua='vps-sweep/1')), 'local')
         self.assertEqual(self.kind(entry('/tao-conviction', ua='curl/8.5.0', ip='10.0.0.5')), 'local')
-        self.assertEqual(self.kind(entry('/tao-conviction', ip='127.0.0.1', headers=DOC)), 'local')
+        self.assertEqual(self.kind(entry('/tao-conviction', ip='127.0.0.1', ua='curl/8.5.0')), 'local')
+
+    def test_browser_navigation_from_this_host_is_its_own_kind(self):
+        # Shadowsocks clients reach raphtools.com from this host's IP.
+        self.assertEqual(self.kind(entry('/tao-conviction', ip='10.0.0.5', headers=DOC)), 'local_browser')
+        headless = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 HeadlessChrome/120.0 Safari/537.36'
+        self.assertEqual(self.kind(entry('/reader/', ua=headless, ip='10.0.0.5', headers=DOC)), 'local')
+        self.assertEqual(self.kind(entry('/tao-conviction/_next/static/a.js', ip='10.0.0.5',
+                                         headers={'Sec-Fetch-Dest': ['script']})), 'local')
 
     def test_bots_and_scripts_from_outside_are_machine(self):
         self.assertEqual(self.kind(entry('/tao-conviction', ua='curl/8.5.0')), 'machine')
@@ -92,6 +100,7 @@ class SummaryTest(unittest.TestCase):
             entry('/tao-conviction', ua='vps-sweep/1'),
             entry('/wp-login.php', status=404, ua='python-requests/2'),
             entry('/tao-conviction/_next/static/a.js', headers={'Sec-Fetch-Dest': ['script']}),
+            entry('/task-hub/', headers=DOC, ip='10.0.0.5'),
         ]
         s = A.summarize(es, LOCAL)
         self.assertEqual(s['services']['/tao-conviction']['views'], 3)
@@ -107,6 +116,8 @@ class SummaryTest(unittest.TestCase):
         self.assertIn('en 1', line)
         self.assertIn('機器 1', line)
         self.assertIn('本機健檢 1', line)
+        self.assertEqual(s['local_browser'], 1)
+        self.assertIn('本機瀏覽器（Shadowsocks 等）1', line)
 
     def test_empty_window_still_reports(self):
         line = A.render_line(A.summarize([], LOCAL), dt.date(2026, 11, 6), dt.date(2026, 11, 12))
