@@ -86,13 +86,7 @@ ExecReload=/usr/bin/caddy reload --config /home/ubuntu/projects/gateway/Caddyfil
 
 所有後端服務均設 `Restart=on-failure`，開機自動啟動。Path → port 對應見 [CLAUDE.md Service Registry](CLAUDE.md#service-registry)；systemd unit 名稱見 workspace `../README.md` 的 `Systemd Service` 欄。
 
-健康檢查：
-
-```bash
-bash scripts/check-services.sh
-```
-
-`scripts/check-services.sh` 會從 `Caddyfile` 解析 handle/import/reverse_proxy port，不需手動維護 port 清單。
+健康檢查由 raph-vps-state 的 self-check 負責：`web:<path>` probe 逐條打路由（含 gate 有沒有漏），結果進晨報。導覽頁的狀態燈來自 `scripts/services-status.py`（`systemctl is-active` README `Systemd Service` 欄的 unit；標「（user）」的走 user manager）。
 
 ## Platform Maintenance
 

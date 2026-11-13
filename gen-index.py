@@ -12,9 +12,11 @@ Writes: www/index.html
 """
 
 import os
-import re
 import sys
 from html import escape as h
+
+import readme_table
+from readme_table import derive_label
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 README_PATH = os.path.join(SCRIPT_DIR, '..', 'README.md')
@@ -42,81 +44,13 @@ def categorise(path: str) -> str:
     return 'Other'
 
 
-def strip_markdown(text):
-    """Remove markdown links [label](url) → label, and backticks."""
-    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    text = re.sub(r'`([^`]+)`', r'\1', text)
-    return text.strip()
-
-
-def derive_label(tech):
-    t = tech.lower()
-    if 'streamlit' in t:
-        return 'Streamlit'
-    if 'next.js' in t:
-        return 'Next.js'
-    if 'vite' in t and 'fastapi' in t:
-        return 'Vite + FastAPI'
-    if 'fastapi' in t:
-        return 'FastAPI'
-    if 'caddy' in t:
-        return 'Caddy'
-    return re.split(r'[\s/+]+', tech)[0]
-
-
 def parse_readme(path):
-    """Return list of card dicts extracted from the README.md table."""
-    with open(path, encoding='utf-8') as f:
-        lines = f.readlines()
-
-    headers = None
-    col = {}
-    cards = []
-
-    for line in lines:
-        line = line.rstrip('\n')
-        if not line.startswith('|'):
-            headers = None
-            continue
-
-        parts = [c.strip() for c in line.split('|')[1:-1]]
-
-        if all(not p or re.fullmatch(r'[-: ]+', p) for p in parts):
-            continue
-
-        if headers is None:
-            if 'Gateway' in parts:
-                headers = parts
-                col = {h: i for i, h in enumerate(headers)}
-            continue
-
-        if len(parts) <= col['Gateway']:
-            continue
-
-        gateway_raw = strip_markdown(parts[col['Gateway']])
-        if not gateway_raw or gateway_raw == '-':
-            continue
-
-        name = strip_markdown(parts[col.get('專案名稱', 0)])
-        desc = strip_markdown(parts[col.get('說明', 1)])
-        tech = strip_markdown(parts[col.get('技術棧', 2)])
-        label = derive_label(tech)
-
-        # "path1:title1, path2:title2" — each entry may carry its own title.
-        for entry in gateway_raw.split(','):
-            entry = entry.strip()
-            if ':' in entry:
-                path, title = entry.split(':', 1)
-            else:
-                path, title = entry, name
-            cards.append({
-                'path': path.strip(),
-                'title': title.strip(),
-                'desc': desc,
-                'label': label,
-            })
-
-    return cards
+    """Return list of card dicts, one per Gateway entry in the README table."""
+    return [
+        {'path': gw_path, 'title': title, 'desc': row.desc, 'label': derive_label(row.tech)}
+        for row in readme_table.parse_readme(path)
+        for gw_path, title in row.entries
+    ]
 
 
 def render_card(c):

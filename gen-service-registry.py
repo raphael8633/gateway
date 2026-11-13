@@ -19,6 +19,8 @@ import os
 import re
 import sys
 
+import readme_table
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 README_PATH = os.path.join(SCRIPT_DIR, '..', 'README.md')
 CADDYFILE_PATH = os.path.join(SCRIPT_DIR, 'Caddyfile')
@@ -28,64 +30,9 @@ BEGIN = '<!-- BEGIN:SERVICE_REGISTRY -->'
 END = '<!-- END:SERVICE_REGISTRY -->'
 
 
-def strip_markdown(text):
-    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    text = re.sub(r'`([^`]+)`', r'\1', text)
-    return text.strip()
-
-
-def derive_label(tech):
-    t = tech.lower()
-    if 'streamlit' in t:
-        return 'Streamlit'
-    if 'next.js' in t:
-        return 'Next.js'
-    if 'vite' in t and 'fastapi' in t:
-        return 'Vite + FastAPI'
-    if 'fastapi' in t:
-        return 'FastAPI'
-    if 'authelia' in t:
-        return 'Authelia'
-    if 'python wsgi' in t or 'wsgi' in t:
-        return 'WSGI'
-    if 'python' in t:
-        return 'Python'
-    if 'caddy' in t:
-        return 'Caddy'
-    return re.split(r'[\s/+]+', tech)[0]
-
-
 def parse_readme(path):
-    """Return list of (gateway_path, project_name, type_label) from README."""
-    rows = []
-    with open(path, encoding='utf-8') as f:
-        lines = f.readlines()
-    headers, col = None, {}
-    for line in lines:
-        line = line.rstrip('\n')
-        if not line.startswith('|'):
-            headers = None
-            continue
-        parts = [c.strip() for c in line.split('|')[1:-1]]
-        if all(not p or re.fullmatch(r'[-: ]+', p) for p in parts):
-            continue
-        if headers is None:
-            if 'Gateway' in parts:
-                headers, col = parts, {h: i for i, h in enumerate(parts)}
-            continue
-        if len(parts) <= col['Gateway']:
-            continue
-        gateway = strip_markdown(parts[col['Gateway']])
-        if not gateway or gateway == '-':
-            continue
-        project = strip_markdown(parts[col.get('專案名稱', 0)])
-        tech = strip_markdown(parts[col.get('技術棧', 2)])
-        label = derive_label(tech)
-        for entry in gateway.split(','):
-            entry = entry.strip()
-            path = entry.split(':', 1)[0].strip()
-            rows.append((path, project, label))
-    return rows
+    """Return list of (gateway_path, project_name) from README."""
+    return [(gw_path, row.name) for row in readme_table.parse_readme(path) for gw_path, _ in row.entries]
 
 
 _PORT_PATTERNS = [
@@ -155,12 +102,12 @@ def best_port(path, ports):
 
 def render_table(rows, ports):
     lines = [
-        '| Path | Port | Project | Type |',
-        '|------|------|---------|------|',
+        '| Path | Port | Project |',
+        '|------|------|---------|',
     ]
-    for path, project, label in rows:
+    for path, project in rows:
         port = best_port(path, ports) or '—'
-        lines.append(f'| `{path}` | {port} | {project} | {label} |')
+        lines.append(f'| `{path}` | {port} | {project} |')
     return '\n'.join(lines)
 
 

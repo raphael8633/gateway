@@ -10,9 +10,10 @@ Run standalone: python3 services-status.py
 Production:     deploy/gateway-services-status.service (systemd unit)
 """
 import json
-import re
+import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -24,73 +25,36 @@ HOST = '127.0.0.1'
 CACHE_TTL_SECONDS = 30
 README_PATH = Path(__file__).resolve().parent.parent.parent / 'README.md'
 
-
-def _strip_md(text: str) -> str:
-    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
-    text = re.sub(r'`([^`]+)`', r'\1', text)
-    return text.strip()
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import readme_table  # noqa: E402
 
 
-def _parse_unit_field(raw: str) -> list[str]:
-    """Pull bare unit names out of the 'Systemd Service' column.
-
-    The column uses backticked, comma-separated entries like
-    ``\\`foo.service\\`, \\`foo.timer\\```; some rows use ``—`` / ``-`` /
-    empty to mean "no systemd unit".
-    """
-    raw = raw.strip()
-    if raw in ('', '-', '—'):
-        return []
-    cleaned = re.sub(r'`', '', raw)
-    units = []
-    for part in cleaned.split(','):
-        unit = part.strip()
-        if not unit or unit in ('-', '—'):
-            continue
-        units.append(unit if unit.endswith(('.service', '.timer', '.socket')) else unit + '.service')
-    return units
-
-
-def load_service_map() -> dict[str, list[str]]:
-    """Return {gateway_path: [systemd_unit, ...]} from workspace README."""
-    lines = README_PATH.read_text(encoding='utf-8').splitlines()
-    headers, col = None, {}
-    result: dict[str, list[str]] = {}
-    for line in lines:
-        if not line.startswith('|'):
-            headers = None
-            continue
-        parts = [c.strip() for c in line.split('|')[1:-1]]
-        if all(not p or re.fullmatch(r'[-: ]+', p) for p in parts):
-            continue
-        if headers is None:
-            if 'Gateway' in parts:
-                headers, col = parts, {h: i for i, h in enumerate(parts)}
-            continue
-        if 'Gateway' not in col or 'Systemd Service' not in col:
-            continue
-        if len(parts) <= max(col['Gateway'], col['Systemd Service']):
-            continue
-        gateway = _strip_md(parts[col['Gateway']])
-        if not gateway or gateway == '-':
-            continue
-        units = _parse_unit_field(parts[col['Systemd Service']])
-        for entry in gateway.split(','):
-            path = entry.strip().split(':', 1)[0].strip()
+def load_service_map() -> dict[str, list[tuple[str, str]]]:
+    """Return {gateway_path: [(unit, 'system' | 'user'), ...]} from workspace README."""
+    result: dict[str, list[tuple[str, str]]] = {}
+    for row in readme_table.parse_readme(README_PATH):
+        for path, _ in row.entries:
             if path:
-                result[path] = units
+                result[path] = row.units
     return result
 
 
-def _is_active(unit: str) -> str:
-    """Return 'up' / 'down' / 'unknown' for a single systemd unit."""
+def _is_active(unit: str, scope: str = 'system') -> str:
+    """Return 'up' / 'down' / 'unknown' for a single systemd unit.
+
+    User units ("（user）" in the README) live on ubuntu's user manager; this
+    service runs as ubuntu under the system manager, so point systemctl at the
+    user runtime dir explicitly.
+    """
     if not shutil.which('systemctl'):
         return 'unknown'
+    argv = ['systemctl', 'is-active', unit]
+    env = None
+    if scope == 'user':
+        argv = ['systemctl', '--user', 'is-active', unit]
+        env = {**os.environ, 'XDG_RUNTIME_DIR': os.environ.get('XDG_RUNTIME_DIR') or f'/run/user/{os.getuid()}'}
     try:
-        proc = subprocess.run(
-            ['systemctl', 'is-active', unit],
-            capture_output=True, text=True, timeout=2,
-        )
+        proc = subprocess.run(argv, capture_output=True, text=True, timeout=2, env=env)
     except subprocess.TimeoutExpired:
         return 'unknown'
     out = proc.stdout.strip()
@@ -112,14 +76,14 @@ def collect_states() -> dict:
             continue
         # If any required unit is up we count the service as up; the worst
         # individual state wins otherwise (down beats unknown).
-        states = [_is_active(u) for u in units]
+        states = [_is_active(u, scope) for u, scope in units]
         if 'up' in states:
             state = 'up'
         elif 'down' in states:
             state = 'down'
         else:
             state = 'unknown'
-        services[path] = {'state': state, 'checked_at': now, 'units': units}
+        services[path] = {'state': state, 'checked_at': now, 'units': [u for u, _ in units]}
     return {'services': services, 'checked_at': now}
 
 
