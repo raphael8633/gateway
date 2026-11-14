@@ -71,7 +71,7 @@ raphtools.com {
 	# Site-wide defaults. `?` sets a header only when the upstream did not send
 	# it, so apps and Authelia keep the values they set themselves. One directive
 	# per header: several `?` fields in one block apply only when all are absent.
-	header ?Strict-Transport-Security "max-age=86400"
+	header ?Strict-Transport-Security "max-age=31536000"
 	header ?X-Content-Type-Options "nosniff"
 	header ?Referrer-Policy "strict-origin-when-cross-origin"
 	header ?X-Frame-Options "SAMEORIGIN"

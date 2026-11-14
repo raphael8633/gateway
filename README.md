@@ -48,7 +48,7 @@ systemctl status platform-backup.timer  # 平台本機備份排程
 
 ## 基線回應標頭
 
-Caddy 對全站回應補四個預設標頭：`Strict-Transport-Security`（`max-age=86400`）、`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: SAMEORIGIN`。每個都用 `?`，上游沒送才補，所以服務或 Authelia 自己送的值會保留。四個標頭各寫一條 `header` 指令：寫在同一個區塊時，Caddy 只在四個都不存在時才套用整組。CSP 由各服務自己負責。新服務若要被別的網域嵌入，自己送 `X-Frame-Options` 或 CSP `frame-ancestors`。
+Caddy 對全站回應補四個預設標頭：`Strict-Transport-Security`（`max-age=31536000`，一年；不加 `includeSubDomains`／`preload`）、`X-Content-Type-Options: nosniff`、`Referrer-Policy: strict-origin-when-cross-origin`、`X-Frame-Options: SAMEORIGIN`。每個都用 `?`，上游沒送才補，所以服務或 Authelia 自己送的值會保留。四個標頭各寫一條 `header` 指令：寫在同一個區塊時，Caddy 只在四個都不存在時才套用整組。CSP 由各服務自己負責。新服務若要被別的網域嵌入，自己送 `X-Frame-Options` 或 CSP `frame-ancestors`。
 
 ## 新增服務
 
