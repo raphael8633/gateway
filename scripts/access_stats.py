@@ -2,9 +2,9 @@
 """Weekly human/machine request counts from the Caddy access log.
 
 Reads ~/data/caddy/access.log plus Caddy's rolled files (access-*.log[.gz]),
-classifies each request, prints one 🟢 line for the morning brief and appends
-the week's numbers to ~/data/caddy/weekly.jsonl so later decisions do not
-depend on raw-log retention.
+classifies each request, prints a 🟢 headline plus a detail line for the morning
+brief and appends the week's numbers to ~/data/caddy/weekly.jsonl so later
+decisions do not depend on raw-log retention.
 
 Kinds:
   human   browser page view from outside this host: document load, or a Next.js
@@ -150,22 +150,30 @@ def summarize(entries, local_ips):
     return s
 
 
-def render_line(s, start, end):
+def render(s, start, end):
+    """Two lines: a 🟢 headline (the only line the morning brief keeps) and the full breakdown."""
+    ranked = sorted(s['services'].items(), key=lambda kv: -kv[1]['views'])
     head = f'🟢 網頁存取 {start:%m-%d}–{end:%m-%d}：人類頁面瀏覽 {s["human"]}'
+    if ranked:
+        # No leading slash here: Telegram renders "/auth" as a tappable bot command.
+        top = '、'.join(f'{name.lstrip("/") or "首頁"} {v["views"]}' for name, v in ranked[:3])
+        head += f'（{top}）'
     parts = []
-    for name, v in sorted(s['services'].items(), key=lambda kv: -kv[1]['views']):
+    for name, v in ranked:
         item = f'{name} {v["views"]}／{v["visitors"]}'
         if v['pages']:
             pages = '、'.join(f'{p.lstrip("/") or "overview"} {n}'
                              for p, n in sorted(v['pages'].items(), key=lambda kv: -kv[1]))
             item += f'（{pages}；en {v["locale"].get("en", 0)}）'
         parts.append(item)
-    body = f'（瀏覽／訪客）：{"，".join(parts)}' if parts else ''
+    detail = [f'瀏覽／訪客：{"，".join(parts)}'] if parts else []
     events = '、'.join(f'{EVENT_LABELS[k]} {v["count"]}／{v["visitors"]}'
                        for k, v in sorted(s['events'].items()))
-    body += f'｜事件：{events}' if events else ''
-    return (f'{head}{body}｜本機瀏覽器（Shadowsocks 等）{s["local_browser"]}、機器 {s["machine"]}、'
-            f'本機健檢 {s["local"]}、其他瀏覽器請求 {s["asset"]}')
+    if events:
+        detail.append(f'事件：{events}')
+    detail.append(f'本機瀏覽器（Shadowsocks 等）{s["local_browser"]}、機器 {s["machine"]}、'
+                  f'本機健檢 {s["local"]}、其他瀏覽器請求 {s["asset"]}')
+    return f'{head}\n{"｜".join(detail)}'
 
 
 def _open(path):
@@ -211,7 +219,7 @@ def main(argv=None):
     until = dt.datetime.now(TPE).replace(hour=0, minute=0, second=0, microsecond=0)
     since = until - dt.timedelta(days=args.days)
     s = summarize(iter_entries(args.log_dir, since, until), host_ips())
-    print(render_line(s, since.date(), (until - dt.timedelta(days=1)).date()))
+    print(render(s, since.date(), (until - dt.timedelta(days=1)).date()))
     if not args.no_history:
         rec = {'since': since.isoformat(), 'until': until.isoformat(), **s}
         with HISTORY.open('a', encoding='utf-8') as f:

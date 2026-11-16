@@ -108,16 +108,25 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(s['services']['/tao-conviction']['pages'], {'/': 1, '/emission': 2})
         self.assertEqual(s['services']['/tao-conviction']['locale'], {'en': 1, 'zh': 2})
         self.assertEqual((s['machine'], s['local'], s['asset']), (1, 1, 1))
-        line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
-        self.assertTrue(line.startswith('🟢 '))
-        self.assertNotIn('\n', line)
-        self.assertIn('/tao-conviction 3／2', line)
-        self.assertIn('emission 2', line)
-        self.assertIn('en 1', line)
-        self.assertIn('機器 1', line)
-        self.assertIn('本機健檢 1', line)
+        head, detail = A.render(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12)).split('\n')
+        self.assertEqual(head, '🟢 網頁存取 11-06–11-12：人類頁面瀏覽 4（tao-conviction 3、task-hub 1）')
+        self.assertTrue(detail.startswith('瀏覽／訪客：/tao-conviction 3／2'))
+        self.assertIn('emission 2', detail)
+        self.assertIn('en 1', detail)
+        self.assertIn('機器 1', detail)
+        self.assertIn('本機健檢 1', detail)
         self.assertEqual(s['local_browser'], 1)
-        self.assertIn('本機瀏覽器（Shadowsocks 等）1', line)
+        self.assertIn('本機瀏覽器（Shadowsocks 等）1', detail)
+
+    def test_head_line_names_only_the_three_most_viewed_services(self):
+        # The morning brief keeps only the first line of a 🟢 block.
+        views = {'/lib': 9, '/auth': 25, '/vpn': 2, '/health': 7}
+        es = [entry(f'{svc}/', headers=DOC, ip=f'203.0.113.{i}')
+              for svc, n in views.items() for i in range(n)]
+        head, detail = A.render(A.summarize(es, LOCAL), dt.date(2026, 11, 9), dt.date(2026, 11, 15)).split('\n')
+        self.assertEqual(head, '🟢 網頁存取 11-09–11-15：人類頁面瀏覽 43（auth 25、lib 9、health 7）')
+        self.assertEqual(detail, '瀏覽／訪客：/auth 25／25，/lib 9／9，/health 7／7，/vpn 2／2'
+                                 '｜本機瀏覽器（Shadowsocks 等）0、機器 0、本機健檢 0、其他瀏覽器請求 0')
 
     def test_watcher_beacon_events_are_counted_per_event(self):
         beacon = {'Sec-Fetch-Dest': ['empty']}
@@ -130,8 +139,9 @@ class SummaryTest(unittest.TestCase):
         s = A.summarize(es, LOCAL)
         self.assertEqual(s['events'], {'simulator-open': {'count': 3, 'visitors': 2}})
         self.assertEqual(s['human'], 0)
-        line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
-        self.assertIn('試算器展開 3／2', line)
+        head, detail = A.render(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12)).split('\n')
+        self.assertEqual(head, '🟢 網頁存取 11-06–11-12：人類頁面瀏覽 0')
+        self.assertTrue(detail.startswith('事件：試算器展開 3／2｜本機瀏覽器'))
 
     def test_unknown_beacon_event_names_never_reach_the_report(self):
         beacon = {'Sec-Fetch-Dest': ['empty']}
@@ -139,13 +149,13 @@ class SummaryTest(unittest.TestCase):
               entry('/tao-conviction/api/beacon?e=simulator-open', headers=beacon, status=204)]
         s = A.summarize(es, LOCAL)
         self.assertEqual(list(s['events']), ['simulator-open'])
-        line = A.render_line(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
+        line = A.render(s, dt.date(2026, 11, 6), dt.date(2026, 11, 12))
         self.assertNotIn('pills', line)
 
     def test_empty_window_still_reports(self):
-        line = A.render_line(A.summarize([], LOCAL), dt.date(2026, 11, 6), dt.date(2026, 11, 12))
-        self.assertTrue(line.startswith('🟢 '))
-        self.assertIn('人類頁面瀏覽 0', line)
+        out = A.render(A.summarize([], LOCAL), dt.date(2026, 11, 6), dt.date(2026, 11, 12))
+        self.assertEqual(out.split('\n'), ['🟢 網頁存取 11-06–11-12：人類頁面瀏覽 0',
+                                           '本機瀏覽器（Shadowsocks 等）0、機器 0、本機健檢 0、其他瀏覽器請求 0'])
 
 
 class ReadTest(unittest.TestCase):
