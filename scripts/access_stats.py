@@ -2,9 +2,11 @@
 """Weekly human/machine request counts from the Caddy access log.
 
 Reads ~/data/caddy/access.log plus Caddy's rolled files (access-*.log[.gz]),
-classifies each request, prints a 🟢 headline plus a detail line for the morning
-brief and appends the week's numbers to ~/data/caddy/weekly.jsonl so later
-decisions do not depend on raw-log retention.
+classifies each request and appends the week's numbers to ~/data/caddy/weekly.jsonl
+so later decisions do not depend on raw-log retention. It prints a 🟢 headline plus
+a detail line; with --quiet (the weekly job) it prints only a 🟡 line when the
+window holds no request at all, so the morning brief hears of a broken
+measurement and nothing else.
 
 Kinds:
   human   browser page view from outside this host: document load, or a Next.js
@@ -215,11 +217,17 @@ def main(argv=None):
     ap.add_argument('--days', type=int, default=7)
     ap.add_argument('--log-dir', default=str(LOG_DIR))
     ap.add_argument('--no-history', action='store_true', help='do not append to weekly.jsonl')
+    ap.add_argument('--quiet', action='store_true', help='print only when the window has no request at all')
     args = ap.parse_args(argv)
     until = dt.datetime.now(TPE).replace(hour=0, minute=0, second=0, microsecond=0)
     since = until - dt.timedelta(days=args.days)
     s = summarize(iter_entries(args.log_dir, since, until), host_ips())
-    print(render(s, since.date(), (until - dt.timedelta(days=1)).date()))
+    start, end = since.date(), (until - dt.timedelta(days=1)).date()
+    if not args.quiet:
+        print(render(s, start, end))
+    elif not (s['human'] + s['machine'] + s['local'] + s['asset'] + s['local_browser'] + len(s['events'])):
+        # This host's own health checks alone write hundreds of lines a week.
+        print(f'🟡 網頁存取 {start:%m-%d}–{end:%m-%d}：access log 這週沒有任何請求紀錄，量測可能中斷（{args.log_dir}）')
     if not args.no_history:
         rec = {'since': since.isoformat(), 'until': until.isoformat(), **s}
         with HISTORY.open('a', encoding='utf-8') as f:

@@ -173,5 +173,52 @@ class ReadTest(unittest.TestCase):
             self.assertEqual(sorted(uris), ['/b', '/c'])
 
 
+class QuietJobTest(unittest.TestCase):
+    """The weekly job runs with --quiet: the numbers go to weekly.jsonl for a later decision, so the
+    morning brief gets a line only when the week's log has no request at all (the measurement broke)."""
+
+    def run_main(self, entries, *flags):
+        import contextlib, io
+        with tempfile.TemporaryDirectory() as d:
+            d = pathlib.Path(d)
+            (d / 'access.log').write_text(''.join(json.dumps(e) + '\n' for e in entries))
+            old = A.HISTORY, A.host_ips
+            A.HISTORY, A.host_ips = d / 'weekly.jsonl', lambda: set(LOCAL)
+            try:
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    A.main(['--log-dir', str(d), *flags])
+                history = (d / 'weekly.jsonl').read_text().splitlines() if (d / 'weekly.jsonl').exists() else []
+                return out.getvalue(), [json.loads(line) for line in history]
+            finally:
+                A.HISTORY, A.host_ips = old
+
+    def recent(self, uri='/tao-conviction', **kw):
+        return entry(uri, headers=DOC, ts=dt.datetime.now(dt.timezone.utc).timestamp() - 2 * 86400, **kw)
+
+    def test_quiet_week_with_requests_prints_nothing_and_still_records(self):
+        out, history = self.run_main([self.recent()], '--quiet')
+        self.assertEqual(out, '')
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]['human'], 1)
+
+    def test_quiet_week_without_any_request_warns(self):
+        out, history = self.run_main([], '--quiet')
+        lines = out.splitlines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(lines[0].startswith('🟡 網頁存取 '), out)
+        self.assertIn('沒有任何請求紀錄', lines[0])
+        self.assertEqual(len(history), 1, 'the empty week is recorded too')
+
+    def test_machine_only_week_is_not_an_outage(self):
+        out, _ = self.run_main([self.recent(ua='curl/8.5.0')], '--quiet')
+        self.assertEqual(out, '')
+
+    def test_without_quiet_the_summary_is_printed(self):
+        out, _ = self.run_main([self.recent()], '--no-history')
+        self.assertTrue(out.startswith('🟢 網頁存取 '), out)
+        self.assertIn('人類頁面瀏覽 1', out)
+
+
 if __name__ == '__main__':
     unittest.main()

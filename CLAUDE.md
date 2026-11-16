@@ -14,7 +14,7 @@
 - **Domain:** `raphtools.com`（Caddy 自動向 Let's Encrypt 申請與續期，無 certbot）
 - 需維護的檔案：`Caddyfile`（routing）；`www/index.html` 與下方 registry 由 `../README.md` 專案表生成（`readme_table.py` 是唯一 parser），勿手改
 - 新增服務流程與各框架 base path 設定見 `README.md`「新增服務」；受保護路由要在 global-auth 加 ACL，`tests/test_acl_routes.py` 擋死規則
-- Access log 在 `~/data/caddy/access.log`，每週統計 `scripts/access_stats.py` 進晨報（見 `README.md`）
+- Access log 在 `~/data/caddy/access.log`，每週統計 `scripts/access_stats.py` 寫 `~/data/caddy/weekly.jsonl`（見 `README.md`）
 - 本 repo 是 GitHub public：commit、文件不貼 log 樣本行、IP、帳號細節或 secret
 
 ## Service Registry

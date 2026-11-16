@@ -42,7 +42,7 @@ systemctl status platform-backup.timer  # 平台本機備份排程
 ## Access log 與每週統計
 
 - Caddy 把 `raphtools.com` 的請求寫成 JSON lines 到 `~/data/caddy/access.log`（50MiB 輪替、留 20 份、最多 90 天）。Cookie 與 Authorization 由 Caddy 遮蔽；只另外抄出 watcher 的 `locale` cookie 值，用來算 en 介面比例。
-- `scripts/access_stats.py` 每週一 07:20 台北由 raph-platform 的 `gateway-access-stats` job 執行，輸出兩行進 07:30 晨報：🟢 首行是總數加瀏覽數前三名的服務（名稱不帶斜線；晨報只留這行），第二行是各服務瀏覽／訪客、事件與非人類請求的完整明細（留在 job 輸出檔），並追加一筆到 `~/data/caddy/weekly.jsonl`。
+- `scripts/access_stats.py` 每週一 07:20 台北由 raph-platform 的 `gateway-access-stats` job 以 `--quiet` 執行：追加一筆到 `~/data/caddy/weekly.jsonl`，平常不輸出、不進晨報；整週 access log 沒有任何請求紀錄時印一行 🟡 進 07:30 晨報（量測中斷）。手動看數字：`python3 scripts/access_stats.py --no-history`（🟢 首行是總數加瀏覽數前三名的服務，第二行是各服務瀏覽／訪客、事件與非人類請求的明細）。
 - 分類：人類頁面瀏覽＝外部瀏覽器的 document 載入或 Next.js RSC 導覽（不含 prefetch）且 2xx／304；其他瀏覽器請求（靜態檔、API、被導去登入）；機器（非瀏覽器 UA、bot、4xx／5xx）；本機瀏覽器（本機 IP 的真瀏覽器導覽，Shadowsocks 用戶從這台出去，另列一格）；本機健檢（其他本機請求與 `vps-sweep/1`）。`/tao-conviction` 另分子頁與 en 數。
 - 純 client 端互動靠 beacon：watcher 在 `/emission` 試算器第一次展開時送 `GET /tao-conviction/api/beacon?e=simulator-open`（204），統計只計 `EVENT_LABELS` 白名單內的 `e`（路由公開，其他名稱一律不進晨報），列在晨報的「事件」；新增事件時在 `EVENT_LABELS` 加中文名。白名單事件仍可被刻意灌量，數字是上限。其他不發請求的互動量不到。
 
