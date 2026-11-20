@@ -1,7 +1,7 @@
 ---
 id: M-001
 title: Vite preview blocks the Host header forwarded by the gateway (legacy G-001)
-severity: hard
+severity: soft
 triggers:
   keywords:
   - vite preview
@@ -15,6 +15,8 @@ triggers:
 guard:
   command: 'curl -s -o /dev/null -w ''%{http_code}'' -H ''Host: raphtools.com'' http://127.0.0.1:PORT/path/  #
     must be 200; vite.config preview.allowedHosts must include raphtools.com'
+enforcement:
+  judgment: "allowedHosts 寫在各 Vite 專案自己的 vite.config.ts，gateway 測試不讀；新服務接上 gateway 時有沒有加 host 靠人"
 status: active
 occurred:
 - '2026-09-12'
