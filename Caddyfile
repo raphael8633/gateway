@@ -50,6 +50,17 @@
 		reverse_proxy localhost:{args[1]}
 	}
 }
+# reader_static     — raph-reader 前端 build 產物（frontend/dist）直接由 Caddy 提供，
+#                     不在 prod 跑 vite preview（vite dev/preview server 的漏洞面不對外）。
+#                     Cache-Control no-cache 與原 vite preview 行為一致（PWA 更新靠 sw.js）。
+(reader_static) {
+	route {
+		uri strip_prefix /reader
+		root * /home/ubuntu/projects/raph-reader/frontend/dist
+		header Cache-Control "no-cache"
+		file_server
+	}
+}
 
 raphtools.com {
 	# TLS: Caddy auto-HTTPS via Let's Encrypt HTTP-01 challenge (no CF API needed)
@@ -125,7 +136,7 @@ raphtools.com {
 
 	# ─── Raph Reader ─────────────────────────────────────────────────────────
 	# Backend  /reader/api → :3005 (auth-gated, strip /reader prefix for API)
-	# Frontend /reader     → :5174 (auth-gated PWA + assets)
+	# Frontend /reader     → frontend/dist 靜態檔（auth-gated PWA + assets；改前端要先 npm run build）
 	# A small set of PWA shell assets are exposed publicly so expired/offline
 	# clients can still bootstrap and update; user data sits behind the API gate.
 	handle /reader/api* {
@@ -137,26 +148,35 @@ raphtools.com {
 	}
 	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/sw.js {
-		reverse_proxy localhost:5174
+		import reader_static
 	}
 	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/workbox-*.js {
-		reverse_proxy localhost:5174
+		import reader_static
 	}
 	# PUBLIC (intentional): PWA shell manifest; user data remains API-gated.
 	handle /reader/manifest.webmanifest {
-		reverse_proxy localhost:5174
+		# 系統 mime 表沒有 .webmanifest
+		header Content-Type "application/manifest+json"
+		import reader_static
 	}
 	# PUBLIC (intentional): static PWA assets; user data remains API-gated.
 	handle /reader/assets/* {
-		reverse_proxy localhost:5174
+		import reader_static
 	}
 	# PUBLIC (intentional): PWA shell document; user data remains API-gated.
 	handle /reader/index.html {
-		reverse_proxy localhost:5174
+		import reader_static
 	}
 	handle /reader* {
-		import proxy_auth 5174
+		route {
+			import auth_portal
+			uri strip_prefix /reader
+			root * /home/ubuntu/projects/raph-reader/frontend/dist
+			try_files {path} /index.html
+			header Cache-Control "no-cache"
+			file_server
+		}
 	}
 
 	# ─── EVM Utils (~/projects/evm-utils, stdlib WSGI :8000; grove, safe-pull) ─
