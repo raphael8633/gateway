@@ -1,0 +1,2 @@
+# commit 關卡：<timeout 秒> <路徑 regex> <指令>；格式見 ~/projects/raph-platform/scripts/git-hooks/pre-commit 檔頭，安裝：~/projects/raph-platform/scripts/install-git-hooks.sh <repo>
+30 \.(py|sh|conf|json)$|^Caddyfile$|^\.precommit-checks$ python3 -m pytest tests -q -p no:cacheprovider
