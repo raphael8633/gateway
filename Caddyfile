@@ -50,15 +50,20 @@
 		reverse_proxy localhost:{args[1]}
 	}
 }
-# reader_static     — raph-reader 前端 build 產物（frontend/dist）直接由 Caddy 提供，
-#                     不在 prod 跑 vite preview（vite dev/preview server 的漏洞面不對外）。
-#                     Cache-Control no-cache 與原 vite preview 行為一致（PWA 更新靠 sw.js）。
-(reader_static) {
+# reader_public     — raph-reader 公開 PWA shell（sw.js、workbox、manifest、assets、index.html）：
+#                     不經 Authelia，strip /reader 後交給 backend :3005（它同時提供 frontend/dist）；
+#                     轉送前清掉身分 header，未登入請求帶不進使用者身分。
+(reader_public) {
+	encode zstd gzip
 	route {
 		uri strip_prefix /reader
-		root * /home/ubuntu/projects/raph-reader/frontend/dist
-		header Cache-Control "no-cache"
-		file_server
+		reverse_proxy localhost:3005 {
+			header_up -Remote-User
+			header_up -Remote-Groups
+			header_up -Remote-Name
+			header_up -Remote-Email
+			header_up -X-Forwarded-User
+		}
 	}
 }
 
@@ -136,7 +141,7 @@ raphtools.com {
 
 	# ─── Raph Reader ─────────────────────────────────────────────────────────
 	# Backend  /reader/api → :3005 (auth-gated, strip /reader prefix for API)
-	# Frontend /reader     → frontend/dist 靜態檔（auth-gated PWA + assets；改前端要先 npm run build）
+	# Frontend /reader     → :3005（同一個 backend 以 RAPH_READER_STATIC_DIR 提供 frontend/dist；auth-gated SPA）
 	# A small set of PWA shell assets are exposed publicly so expired/offline
 	# clients can still bootstrap and update; user data sits behind the API gate.
 	handle /reader/api* {
@@ -148,35 +153,27 @@ raphtools.com {
 	}
 	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/sw.js {
-		import reader_static
+		import reader_public
 	}
 	# PUBLIC (intentional): PWA shell asset for offline clients; user data remains API-gated.
 	handle /reader/workbox-*.js {
-		import reader_static
+		import reader_public
 	}
 	# PUBLIC (intentional): PWA shell manifest; user data remains API-gated.
 	handle /reader/manifest.webmanifest {
-		# 系統 mime 表沒有 .webmanifest
-		header Content-Type "application/manifest+json"
-		import reader_static
+		import reader_public
 	}
 	# PUBLIC (intentional): static PWA assets; user data remains API-gated.
 	handle /reader/assets/* {
-		import reader_static
+		import reader_public
 	}
 	# PUBLIC (intentional): PWA shell document; user data remains API-gated.
 	handle /reader/index.html {
-		import reader_static
+		import reader_public
 	}
 	handle /reader* {
-		route {
-			import auth_portal
-			uri strip_prefix /reader
-			root * /home/ubuntu/projects/raph-reader/frontend/dist
-			try_files {path} /index.html
-			header Cache-Control "no-cache"
-			file_server
-		}
+		encode zstd gzip
+		import proxy_auth_strip /reader 3005
 	}
 
 	# ─── EVM Utils (~/projects/evm-utils, stdlib WSGI :8000; grove, safe-pull) ─
